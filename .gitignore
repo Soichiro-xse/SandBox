@@ -13,8 +13,15 @@ __MACOSX/
 .vscode/
 .idea/
 
-# Node.js (if any tools are added later)
+# Node.js
 node_modules/
+web-haptics/node_modules/
+web-haptics/packages/web-haptics/node_modules/
+web-haptics/site/node_modules/
+web-haptics/apps/*/node_modules/
+web-haptics/packages/web-haptics/dist/
+web-haptics/apps/*/dist/
+web-haptics/.pnpmfile-approve.cjs
 
 # Screenshots (generated at runtime in Unity projects)
 # Note: Screenshots/ is created inside Unity projects, not here
