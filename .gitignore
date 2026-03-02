@@ -1,0 +1,7 @@
+web-haptics/node_modules/
+web-haptics/packages/web-haptics/node_modules/
+web-haptics/site/node_modules/
+web-haptics/apps/*/node_modules/
+web-haptics/packages/web-haptics/dist/
+web-haptics/apps/*/dist/
+web-haptics/.pnpmfile-approve.cjs
