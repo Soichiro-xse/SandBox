@@ -1,0 +1,662 @@
+{
+  "contents": [
+    [
+      {
+        "boundingBox": [
+          [
+            380,
+            229
+          ],
+          [
+            380,
+            251
+          ],
+          [
+            569,
+            229
+          ],
+          [
+            569,
+            251
+          ]
+        ],
+        "id": 0,
+        "isVertical": "true",
+        "text": "(2)気送子送付管",
+        "isTextline": "true",
+        "confidence": 0.856
+      },
+      {
+        "boundingBox": [
+          [
+            432,
+            262
+          ],
+          [
+            432,
+            294
+          ],
+          [
+            990,
+            262
+          ],
+          [
+            990,
+            294
+          ]
+        ],
+        "id": 1,
+        "isVertical": "true",
+        "text": "気送子送付には、上記気送管にて送付するものと、空",
+        "isTextline": "true",
+        "confidence": 0.943
+      },
+      {
+        "boundingBox": [
+          [
+            411,
+            307
+          ],
+          [
+            411,
+            337
+          ],
+          [
+            989,
+            307
+          ],
+          [
+            989,
+            337
+          ]
+        ],
+        "id": 2,
+        "isVertical": "true",
+        "text": "気の圧縮を使用せず.直接落下させる装置の二通りがあ",
+        "isTextline": "true",
+        "confidence": 0.944
+      },
+      {
+        "boundingBox": [
+          [
+            412,
+            352
+          ],
+          [
+            412,
+            380
+          ],
+          [
+            971,
+            352
+          ],
+          [
+            971,
+            380
+          ]
+        ],
+        "id": 3,
+        "isVertical": "true",
+        "text": "る。後者の送付電は出納台左側に設置されており.5.",
+        "isTextline": "true",
+        "confidence": 0.945
+      },
+      {
+        "boundingBox": [
+          [
+            416,
+            389
+          ],
+          [
+            416,
+            422
+          ],
+          [
+            996,
+            389
+          ],
+          [
+            996,
+            422
+          ]
+        ],
+        "id": 4,
+        "isVertical": "true",
+        "text": "3.1の各層ステーションに直接落下するよう3本の管",
+        "isTextline": "true",
+        "confidence": 0.947
+      },
+      {
+        "boundingBox": [
+          [
+            412,
+            438
+          ],
+          [
+            412,
+            466
+          ],
+          [
+            993,
+            438
+          ],
+          [
+            993,
+            466
+          ]
+        ],
+        "id": 5,
+        "isVertical": "true",
+        "text": "が通じ投入ロのフタに層表示が記されている。取扱いに",
+        "isTextline": "true",
+        "confidence": 0.951
+      },
+      {
+        "boundingBox": [
+          [
+            417,
+            477
+          ],
+          [
+            417,
+            509
+          ],
+          [
+            997,
+            477
+          ],
+          [
+            997,
+            509
+          ]
+        ],
+        "id": 6,
+        "isVertical": "true",
+        "text": "当っては気送子投入優すみやかにフタを肉め速度を調整",
+        "isTextline": "true",
+        "confidence": 0.948
+      },
+      {
+        "boundingBox": [
+          [
+            417,
+            526
+          ],
+          [
+            417,
+            550
+          ],
+          [
+            731,
+            526
+          ],
+          [
+            731,
+            550
+          ]
+        ],
+        "id": 7,
+        "isVertical": "true",
+        "text": "する必要がある。(図2参照)",
+        "isTextline": "true",
+        "confidence": 0.929
+      },
+      {
+        "boundingBox": [
+          [
+            522,
+            610
+          ],
+          [
+            522,
+            633
+          ],
+          [
+            740,
+            610
+          ],
+          [
+            740,
+            633
+          ]
+        ],
+        "id": 8,
+        "isVertical": "true",
+        "text": "(図2)送付管",
+        "isTextline": "true",
+        "confidence": 0.887
+      },
+      {
+        "boundingBox": [
+          [
+            1152,
+            224
+          ],
+          [
+            1152,
+            249
+          ],
+          [
+            1775,
+            224
+          ],
+          [
+            1775,
+            249
+          ]
+        ],
+        "id": 9,
+        "isVertical": "true",
+        "text": "b各ステーション(以下5.3.1ご現在係員の特徴する層",
+        "isTextline": "true",
+        "confidence": 0.916
+      },
+      {
+        "boundingBox": [
+          [
+            1171,
+            270
+          ],
+          [
+            1171,
+            287
+          ],
+          [
+            1442,
+            270
+          ],
+          [
+            1442,
+            287
+          ]
+        ],
+        "id": 10,
+        "isVertical": "true",
+        "text": "のみステーションと呼ぶ)",
+        "isTextline": "true",
+        "confidence": 0.753
+      },
+      {
+        "boundingBox": [
+          [
+            1164,
+            309
+          ],
+          [
+            1164,
+            327
+          ],
+          [
+            1281,
+            309
+          ],
+          [
+            1281,
+            327
+          ]
+        ],
+        "id": 11,
+        "isVertical": "true",
+        "text": "(1)気送管",
+        "isTextline": "true",
+        "confidence": 0.913
+      },
+      {
+        "boundingBox": [
+          [
+            1214,
+            354
+          ],
+          [
+            1214,
+            379
+          ],
+          [
+            1773,
+            354
+          ],
+          [
+            1773,
+            379
+          ]
+        ],
+        "id": 12,
+        "isVertical": "true",
+        "text": "気送子走行中(赤ランプ点灯)でないとき、目的層の",
+        "isTextline": "true",
+        "confidence": 0.94
+      },
+      {
+        "boundingBox": [
+          [
+            1191,
+            395
+          ],
+          [
+            1191,
+            421
+          ],
+          [
+            1758,
+            395
+          ],
+          [
+            1758,
+            421
+          ]
+        ],
+        "id": 13,
+        "isVertical": "true",
+        "text": "ボタンを押すと青、赤のランプが同時に点灯するから,",
+        "isTextline": "true",
+        "confidence": 0.94
+      },
+      {
+        "boundingBox": [
+          [
+            1189,
+            440
+          ],
+          [
+            1189,
+            464
+          ],
+          [
+            1770,
+            440
+          ],
+          [
+            1770,
+            464
+          ]
+        ],
+        "id": 14,
+        "isVertical": "true",
+        "text": "投入口の扉を開いて気送子を投入する。気送子が到着す",
+        "isTextline": "true",
+        "confidence": 0.942
+      },
+      {
+        "boundingBox": [
+          [
+            1194,
+            482
+          ],
+          [
+            1194,
+            503
+          ],
+          [
+            1500,
+            482
+          ],
+          [
+            1500,
+            503
+          ]
+        ],
+        "id": 15,
+        "isVertical": "true",
+        "text": "ると両ランプが同時に消える。",
+        "isTextline": "true",
+        "confidence": 0.936
+      },
+      {
+        "boundingBox": [
+          [
+            1159,
+            524
+          ],
+          [
+            1159,
+            542
+          ],
+          [
+            1350,
+            524
+          ],
+          [
+            1350,
+            542
+          ]
+        ],
+        "id": 16,
+        "isVertical": "true",
+        "text": "(2)景送子送子管",
+        "isTextline": "true",
+        "confidence": 0.896
+      },
+      {
+        "boundingBox": [
+          [
+            1210,
+            567
+          ],
+          [
+            1210,
+            591
+          ],
+          [
+            1770,
+            567
+          ],
+          [
+            1770,
+            591
+          ]
+        ],
+        "id": 17,
+        "isVertical": "true",
+        "text": "中央出納台よりの落下による一方交通であるので、各",
+        "isTextline": "true",
+        "confidence": 0.938
+      },
+      {
+        "boundingBox": [
+          [
+            1189,
+            612
+          ],
+          [
+            1189,
+            636
+          ],
+          [
+            1769,
+            612
+          ],
+          [
+            1769,
+            636
+          ]
+        ],
+        "id": 18,
+        "isVertical": "true",
+        "text": "ステーションは受けー方である。従って気送子の返却は",
+        "isTextline": "true",
+        "confidence": 0.936
+      },
+      {
+        "boundingBox": [
+          [
+            1185,
+            653
+          ],
+          [
+            1185,
+            672
+          ],
+          [
+            1330,
+            653
+          ],
+          [
+            1330,
+            672
+          ]
+        ],
+        "id": 19,
+        "isVertical": "true",
+        "text": "気送管による。",
+        "isTextline": "true",
+        "confidence": 0.919
+      },
+      {
+        "boundingBox": [
+          [
+            1144,
+            696
+          ],
+          [
+            1144,
+            714
+          ],
+          [
+            1250,
+            696
+          ],
+          [
+            1250,
+            714
+          ]
+        ],
+        "id": 20,
+        "isVertical": "true",
+        "text": "C気送子",
+        "isTextline": "true",
+        "confidence": 0.915
+      },
+      {
+        "boundingBox": [
+          [
+            1185,
+            742
+          ],
+          [
+            1185,
+            764
+          ],
+          [
+            1761,
+            742
+          ],
+          [
+            1761,
+            764
+          ]
+        ],
+        "id": 21,
+        "isVertical": "true",
+        "text": "プラスチックの透明な円筒形で出来ており,頭部はフェ",
+        "isTextline": "true",
+        "confidence": 0.94
+      },
+      {
+        "boundingBox": [
+          [
+            1161,
+            782
+          ],
+          [
+            1161,
+            807
+          ],
+          [
+            1766,
+            782
+          ],
+          [
+            1766,
+            807
+          ]
+        ],
+        "id": 22,
+        "isVertical": "true",
+        "text": "ルトで保護され,図書請求票を中に入れ(たて二つ折りに",
+        "isTextline": "true",
+        "confidence": 0.937
+      },
+      {
+        "boundingBox": [
+          [
+            1159,
+            825
+          ],
+          [
+            1159,
+            851
+          ],
+          [
+            1765,
+            825
+          ],
+          [
+            1765,
+            851
+          ]
+        ],
+        "id": 23,
+        "isVertical": "true",
+        "text": "入れる)皮ブタのホックを閉めてから矢印の方向に頭部",
+        "isTextline": "true",
+        "confidence": 0.94
+      },
+      {
+        "boundingBox": [
+          [
+            1163,
+            871
+          ],
+          [
+            1163,
+            889
+          ],
+          [
+            1423,
+            871
+          ],
+          [
+            1423,
+            889
+          ]
+        ],
+        "id": 24,
+        "isVertical": "true",
+        "text": "を必ず下にして投入する。",
+        "isTextline": "true",
+        "confidence": 0.929
+      },
+      {
+        "boundingBox": [
+          [
+            605,
+            1260
+          ],
+          [
+            605,
+            1274
+          ],
+          [
+            657,
+            1260
+          ],
+          [
+            657,
+            1274
+          ]
+        ],
+        "id": 25,
+        "isVertical": "true",
+        "text": "(30)",
+        "isTextline": "true",
+        "confidence": 0
+      }
+    ]
+  ],
+  "imginfo": {
+    "img_width": 2048,
+    "img_height": 1446,
+    "img_path": "/home/user/SandBox/ndlocr-lite/resource/digidepo_2531162_0024.jpg",
+    "img_name": "digidepo_2531162_0024.jpg"
+  }
+}
