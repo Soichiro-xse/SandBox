@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Interactive liquid art experience - touch to create beautiful ripples" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <title>Liquid Art - Interactive Water Experience</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #0a0a1a;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #app {
+      width: 100%; height: 100%;
+      position: relative;
+    }
+    canvas {
+      display: block;
+      width: 100%; height: 100%;
+    }
+    #ui-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.6s ease;
+    }
+    #ui-overlay.hidden { opacity: 0; }
+    #ui-overlay > * { pointer-events: auto; }
+    .logo {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-weight: 100;
+      font-size: 18px;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+      padding: 8px 16px;
+      border-radius: 24px;
+      font-size: 13px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      font-family: 'Helvetica Neue', sans-serif;
+    }
+    .btn:hover, .btn.active {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.95);
+    }
+    #theme-panel {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      z-index: 10;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+    #theme-panel.open {
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .theme-card {
+      width: 80px;
+      height: 80px;
+      border-radius: 16px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .theme-card.active {
+      border-color: rgba(255,255,255,0.8);
+      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+    }
+    .theme-card:hover { transform: scale(1.08); }
+    .theme-label {
+      position: absolute;
+      bottom: 4px; left: 0; right: 0;
+      text-align: center;
+      font-size: 10px;
+      color: white;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      font-family: 'Helvetica Neue', sans-serif;
+    }
+    .theme-card .lock {
+      position: absolute;
+      top: 4px; right: 4px;
+      font-size: 12px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 50%;
+      width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #start-screen {
+      position: fixed;
+      inset: 0;
+      background: #0a0a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.8s ease;
+    }
+    #start-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #start-screen h1 {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-weight: 100;
+      font-size: 42px;
+      color: rgba(255,255,255,0.8);
+      letter-spacing: 12px;
+      margin-bottom: 16px;
+    }
+    #start-screen p {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-weight: 300;
+      font-size: 14px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 2px;
+      margin-bottom: 48px;
+    }
+    .start-btn {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .start-btn:hover {
+      background: rgba(255,255,255,0.1);
+      transform: scale(1.05);
+    }
+    .start-btn::after {
+      content: '▶';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.6);
+      font-size: 24px;
+      padding-left: 4px;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); }
+      50% { box-shadow: 0 0 0 20px rgba(255,255,255,0); }
+    }
+    .start-btn { animation: pulse 2s infinite; }
+  </style>
+  <script type="module" crossorigin src="/assets/index-BB3aUzCv.js"></script>
+<link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+<body>
+  <div id="start-screen">
+    <h1>LIQUID</h1>
+    <p>touch the water</p>
+    <button class="start-btn" id="start-btn"></button>
+  </div>
+  <div id="app">
+    <div id="ui-overlay">
+      <div class="logo">LIQUID</div>
+      <div class="controls">
+        <button class="btn" id="btn-theme">Themes</button>
+        <button class="btn" id="btn-sound">♪ On</button>
+        <button class="btn" id="btn-fullscreen">⛶</button>
+      </div>
+    </div>
+    <div id="theme-panel"></div>
+  </div>
+</body>
+</html>
