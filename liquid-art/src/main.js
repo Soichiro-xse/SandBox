@@ -2,39 +2,48 @@ import * as THREE from 'three';
 import { FluidSimulation } from './FluidSimulation.js';
 import { SoundEngine } from './SoundEngine.js';
 import { themes } from './themes.js';
-import { waterVertexShader, waterFragmentShader } from './shaders/render.js';
+import {
+  fluidDisplayVertexShader,
+  fluidDisplayFragmentShader,
+  bloomThresholdFragmentShader,
+  blurFragmentShader,
+  compositeFragmentShader,
+} from './shaders/render.js';
 
 class LiquidArt {
   constructor() {
     this.currentTheme = 'moonlitLake';
     this.soundEngine = new SoundEngine();
     this.pointers = new Map();
-    this.lastPointers = new Map();
     this.uiVisible = true;
     this.uiTimeout = null;
     this.themePanelOpen = false;
     this.started = false;
+    this.autoSplatTimer = 0;
+    this.startTime = performance.now();
 
     this._initRenderer();
     this._initFluidSim();
-    this._initWaterScene();
+    this._initFullscreenQuad();
+    this._initBloom();
     this._initUI();
     this._initEvents();
+
+    // Start auto-demo immediately (before user interaction)
+    this._startAutoDemo();
     this._animate();
   }
 
   _initRenderer() {
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: false,
       alpha: false,
       powerPreference: 'high-performance',
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setClearColor(0x0a0a1a);
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.setClearColor(0x010108);
+    this.renderer.autoClear = false;
     document.getElementById('app').appendChild(this.renderer.domElement);
   }
 
@@ -42,215 +51,143 @@ class LiquidArt {
     const isMobile = window.innerWidth < 768;
     const simSize = isMobile ? 128 : 256;
     this.fluidSim = new FluidSimulation(this.renderer, simSize, simSize);
+    // Bigger splats, slower dissipation for more visible effects
+    this.fluidSim.config.splatRadius = isMobile ? 0.012 : 0.008;
+    this.fluidSim.config.dyeDissipation = 0.985;
+    this.fluidSim.config.velocityDissipation = 0.99;
+    this.fluidSim.config.curl = 35;
   }
 
-  _initWaterScene() {
-    this.scene = new THREE.Scene();
-    this.clock = new THREE.Clock();
+  _initFullscreenQuad() {
+    this.quadScene = new THREE.Scene();
+    this.quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
+    this.quadScene.add(this.quad);
 
-    // Camera
-    this.camera = new THREE.PerspectiveCamera(
-      50,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      100
-    );
-    this.camera.position.set(0, 2.5, 3.5);
-    this.camera.lookAt(0, 0, 0);
-
-    // Environment map for reflections
-    this.envMapRT = new THREE.WebGLCubeRenderTarget(256);
-    this._generateEnvMap();
-
-    // Water plane
-    const theme = themes[this.currentTheme];
-    const segments = window.innerWidth < 768 ? 128 : 256;
-    const waterGeo = new THREE.PlaneGeometry(6, 6, segments, segments);
-    waterGeo.rotateX(-Math.PI / 2);
-
-    this.waterMat = new THREE.ShaderMaterial({
+    // Main display material
+    this.displayMat = new THREE.ShaderMaterial({
       uniforms: {
-        uHeightMap: { value: null },
-        uVelocityMap: { value: null },
         uDyeMap: { value: null },
-        uDisplacement: { value: 0.3 },
         uTime: { value: 0 },
-        uDeepColor: { value: new THREE.Vector3(...theme.deepColor) },
-        uShallowColor: { value: new THREE.Vector3(...theme.shallowColor) },
-        uFresnelColor: { value: new THREE.Vector3(...theme.fresnelColor) },
-        uSpecularColor: { value: new THREE.Vector3(...theme.specularColor) },
-        uLightDir: { value: new THREE.Vector3(...theme.lightDir) },
-        uCameraPos: { value: this.camera.position },
-        uFresnelPower: { value: theme.fresnelPower },
-        uSpecularPower: { value: theme.specularPower },
-        uEnvMap: { value: this.envMapRT.texture },
-        uEnvMapIntensity: { value: theme.envMapIntensity },
-        uDyeIntensity: { value: theme.dyeIntensity },
+        uIntensity: { value: 2.5 },
       },
-      vertexShader: waterVertexShader,
-      fragmentShader: waterFragmentShader,
-      transparent: true,
-      side: THREE.DoubleSide,
-    });
-
-    this.waterMesh = new THREE.Mesh(waterGeo, this.waterMat);
-    this.scene.add(this.waterMesh);
-
-    // Particles floating on water
-    this._initParticles();
-
-    // Background gradient
-    this._updateBackground(theme);
-  }
-
-  _generateEnvMap() {
-    const scene = new THREE.Scene();
-    const cubeCamera = new THREE.CubeCamera(0.1, 100, this.envMapRT);
-
-    // Simple gradient sky for reflections
-    const skyGeo = new THREE.SphereGeometry(50, 32, 32);
-    const skyMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uTopColor: { value: new THREE.Color(0x0a1530) },
-        uBottomColor: { value: new THREE.Color(0x000510) },
-        uStarDensity: { value: 0.98 },
-      },
-      vertexShader: `
-        varying vec3 vWorldPos;
-        void main() {
-          vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 uTopColor;
-        uniform vec3 uBottomColor;
-        uniform float uStarDensity;
-        varying vec3 vWorldPos;
-
-        float hash(vec2 p) {
-          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-        }
-
-        void main() {
-          float y = normalize(vWorldPos).y;
-          vec3 color = mix(uBottomColor, uTopColor, max(y, 0.0));
-
-          // Stars
-          vec2 grid = floor(vWorldPos.xz * 2.0);
-          float star = step(uStarDensity, hash(grid));
-          float brightness = hash(grid + 100.0);
-          color += star * brightness * 0.5 * step(0.3, y);
-
-          gl_FragColor = vec4(color, 1.0);
-        }
-      `,
-      side: THREE.BackSide,
-    });
-    scene.add(new THREE.Mesh(skyGeo, skyMat));
-
-    // Add moon
-    const moonGeo = new THREE.SphereGeometry(3, 32, 32);
-    const moonMat = new THREE.MeshBasicMaterial({ color: 0xffeedd });
-    const moon = new THREE.Mesh(moonGeo, moonMat);
-    moon.position.set(10, 20, -15);
-    scene.add(moon);
-
-    cubeCamera.update(this.renderer, scene);
-  }
-
-  _initParticles() {
-    const count = 200;
-    const geo = new THREE.BufferGeometry();
-    const positions = new Float32Array(count * 3);
-    const sizes = new Float32Array(count);
-
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 6;
-      positions[i * 3 + 1] = 0.01 + Math.random() * 0.02;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 6;
-      sizes[i] = 0.5 + Math.random() * 1.5;
-    }
-
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-    const mat = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uColor: { value: new THREE.Color(0x4488ff) },
-      },
-      vertexShader: `
-        attribute float size;
-        uniform float uTime;
-        varying float vAlpha;
-        void main() {
-          vec3 pos = position;
-          pos.y += sin(pos.x * 2.0 + uTime) * 0.02 + sin(pos.z * 3.0 + uTime * 0.7) * 0.015;
-          vAlpha = 0.2 + 0.3 * sin(uTime * 0.5 + pos.x * 3.0);
-          vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
-          gl_PointSize = size * (200.0 / -mvPos.z);
-          gl_Position = projectionMatrix * mvPos;
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 uColor;
-        varying float vAlpha;
-        void main() {
-          float d = length(gl_PointCoord - 0.5) * 2.0;
-          float alpha = smoothstep(1.0, 0.0, d) * vAlpha;
-          gl_FragColor = vec4(uColor, alpha);
-        }
-      `,
-      transparent: true,
+      vertexShader: fluidDisplayVertexShader,
+      fragmentShader: fluidDisplayFragmentShader,
+      depthTest: false,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
     });
 
-    this.particles = new THREE.Points(geo, mat);
-    this.scene.add(this.particles);
+    // Render target for scene (before bloom)
+    this.sceneRT = new THREE.WebGLRenderTarget(
+      window.innerWidth, window.innerHeight,
+      { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat }
+    );
   }
 
-  _updateBackground(theme) {
-    document.body.style.background = `linear-gradient(180deg, ${theme.bgGradient.join(', ')})`;
-    this.renderer.setClearColor(new THREE.Color(theme.bgGradient[0]));
+  _initBloom() {
+    const w = Math.floor(window.innerWidth / 2);
+    const h = Math.floor(window.innerHeight / 2);
+    const rtOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat };
+
+    this.bloomRT1 = new THREE.WebGLRenderTarget(w, h, rtOpts);
+    this.bloomRT2 = new THREE.WebGLRenderTarget(w, h, rtOpts);
+
+    const baseVert = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position, 1.0); }`;
+
+    this.thresholdMat = new THREE.ShaderMaterial({
+      uniforms: { uTexture: { value: null }, uThreshold: { value: 0.15 } },
+      vertexShader: baseVert,
+      fragmentShader: bloomThresholdFragmentShader,
+      depthTest: false, depthWrite: false,
+    });
+
+    this.blurMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTexture: { value: null },
+        uDirection: { value: new THREE.Vector2(1, 0) },
+        uResolution: { value: new THREE.Vector2(w, h) },
+      },
+      vertexShader: baseVert,
+      fragmentShader: blurFragmentShader,
+      depthTest: false, depthWrite: false,
+    });
+
+    this.compositeMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uScene: { value: null },
+        uBloom: { value: null },
+        uBloomStrength: { value: 0.8 },
+      },
+      vertexShader: baseVert,
+      fragmentShader: compositeFragmentShader,
+      depthTest: false, depthWrite: false,
+    });
+  }
+
+  _renderQuad(material, target) {
+    this.quad.material = material;
+    this.renderer.setRenderTarget(target);
+    this.renderer.clear();
+    this.renderer.render(this.quadScene, this.quadCamera);
+    this.renderer.setRenderTarget(null);
+  }
+
+  _startAutoDemo() {
+    // Create initial burst of beautiful splats
+    const theme = themes[this.currentTheme];
+    const colors = theme.splatColors;
+
+    // Central burst
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2;
+      const r = 0.08;
+      const x = 0.5 + Math.cos(angle) * r;
+      const y = 0.5 + Math.sin(angle) * r;
+      const dx = Math.cos(angle) * 20;
+      const dy = Math.sin(angle) * 20;
+      const c = colors[i % colors.length];
+      this.fluidSim.splat(x, y, dx, dy, { r: c.r * 2, g: c.g * 2, b: c.b * 2 });
+    }
+  }
+
+  _doAutoSplat() {
+    const theme = themes[this.currentTheme];
+    const colors = theme.splatColors;
+    const time = performance.now() * 0.001;
+
+    // More frequent and dramatic auto splats
+    const x = 0.3 + Math.sin(time * 0.7) * 0.2 + Math.sin(time * 1.3) * 0.1;
+    const y = 0.3 + Math.cos(time * 0.5) * 0.2 + Math.cos(time * 1.1) * 0.1;
+    const dx = Math.sin(time * 1.2) * 15;
+    const dy = Math.cos(time * 0.9) * 15;
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    this.fluidSim.splat(x, y, dx, dy, { r: c.r * 1.5, g: c.g * 1.5, b: c.b * 1.5 });
   }
 
   _applyTheme(themeName) {
     const theme = themes[themeName];
     if (!theme) return;
-
     this.currentTheme = themeName;
-
-    // Animate uniforms transition
-    const u = this.waterMat.uniforms;
-    this._lerpVec3(u.uDeepColor.value, theme.deepColor, 0.05);
-    this._lerpVec3(u.uShallowColor.value, theme.shallowColor, 0.05);
-    this._lerpVec3(u.uFresnelColor.value, theme.fresnelColor, 0.05);
-    this._lerpVec3(u.uSpecularColor.value, theme.specularColor, 0.05);
-    u.uLightDir.value.set(...theme.lightDir);
-    u.uFresnelPower.value = theme.fresnelPower;
-    u.uSpecularPower.value = theme.specularPower;
-    u.uEnvMapIntensity.value = theme.envMapIntensity;
-    u.uDyeIntensity.value = theme.dyeIntensity;
-
-    this._updateBackground(theme);
     this.soundEngine.setTheme(themeName);
 
-    // Update particle color
-    const fresnelColor = new THREE.Color(...theme.fresnelColor);
-    this.particles.material.uniforms.uColor.value = fresnelColor;
+    // Splash new theme colors
+    const colors = theme.splatColors;
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 + Math.random() * 0.3;
+      const r = 0.1 + Math.random() * 0.15;
+      const x = 0.5 + Math.cos(angle) * r;
+      const y = 0.5 + Math.sin(angle) * r;
+      const dx = Math.cos(angle) * 25;
+      const dy = Math.sin(angle) * 25;
+      const c = colors[i % colors.length];
+      this.fluidSim.splat(x, y, dx, dy, { r: c.r * 2.5, g: c.g * 2.5, b: c.b * 2.5 });
+    }
 
-    // Update theme panel
+    document.body.style.background = theme.bgGradient[0];
+
     document.querySelectorAll('.theme-card').forEach((card) => {
       card.classList.toggle('active', card.dataset.theme === themeName);
     });
-  }
-
-  _lerpVec3(target, dest, t) {
-    target.x += (dest[0] - target.x) * t;
-    target.y += (dest[1] - target.y) * t;
-    target.z += (dest[2] - target.z) * t;
   }
 
   _initUI() {
@@ -261,30 +198,23 @@ class LiquidArt {
       card.className = `theme-card ${key === this.currentTheme ? 'active' : ''}`;
       card.dataset.theme = key;
       card.style.background = theme.cardBg;
-      card.innerHTML = `
-        <span class="theme-label">${theme.name}</span>
-        ${!theme.free ? '<span class="lock">🔒</span>' : ''}
-      `;
+      card.innerHTML = `<span class="theme-label">${theme.name}</span>`;
       card.addEventListener('click', () => {
-        if (!theme.free) {
-          // Show unlock hint
-          card.style.transform = 'scale(0.95)';
-          setTimeout(() => (card.style.transform = ''), 200);
-          return;
-        }
         this._applyTheme(key);
       });
       panel.appendChild(card);
     });
 
-    // Buttons
     document.getElementById('btn-theme').addEventListener('click', () => {
       this.themePanelOpen = !this.themePanelOpen;
       document.getElementById('theme-panel').classList.toggle('open', this.themePanelOpen);
       document.getElementById('btn-theme').classList.toggle('active', this.themePanelOpen);
     });
 
-    document.getElementById('btn-sound').addEventListener('click', () => {
+    document.getElementById('btn-sound').addEventListener('click', async () => {
+      if (!this.soundEngine.initialized) {
+        await this.soundEngine.init();
+      }
       const on = this.soundEngine.toggle();
       document.getElementById('btn-sound').textContent = on ? '♪ On' : '♪ Off';
     });
@@ -297,7 +227,7 @@ class LiquidArt {
       }
     });
 
-    // Start button
+    // Start button - initializes sound and dismisses overlay
     document.getElementById('start-btn').addEventListener('click', async () => {
       await this.soundEngine.init();
       this.started = true;
@@ -305,27 +235,57 @@ class LiquidArt {
       setTimeout(() => {
         document.getElementById('start-screen').style.display = 'none';
       }, 800);
+      // Big splash on start
+      this._burstSplat();
     });
   }
 
+  _burstSplat() {
+    const theme = themes[this.currentTheme];
+    const colors = theme.splatColors;
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const r = 0.05 + Math.random() * 0.2;
+      const x = 0.5 + Math.cos(angle) * r;
+      const y = 0.5 + Math.sin(angle) * r;
+      const dx = Math.cos(angle) * 30 + (Math.random() - 0.5) * 10;
+      const dy = Math.sin(angle) * 30 + (Math.random() - 0.5) * 10;
+      const c = colors[i % colors.length];
+      this.fluidSim.splat(x, y, dx, dy, { r: c.r * 3, g: c.g * 3, b: c.b * 3 });
+    }
+  }
+
   _initEvents() {
-    // Resize
     window.addEventListener('resize', () => {
-      this.camera.aspect = window.innerWidth / window.innerHeight;
-      this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+      const w = Math.floor(window.innerWidth / 2);
+      const h = Math.floor(window.innerHeight / 2);
+      this.sceneRT.setSize(window.innerWidth, window.innerHeight);
+      this.bloomRT1.setSize(w, h);
+      this.bloomRT2.setSize(w, h);
+      this.blurMat.uniforms.uResolution.value.set(w, h);
     });
 
     const canvas = this.renderer.domElement;
 
-    // Mouse events
+    // Mouse
     canvas.addEventListener('mousedown', (e) => this._onPointerDown(0, e.clientX, e.clientY));
     canvas.addEventListener('mousemove', (e) => this._onPointerMove(0, e.clientX, e.clientY, e.buttons > 0));
     canvas.addEventListener('mouseup', () => this._onPointerUp(0));
 
-    // Touch events
+    // Touch
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      if (!this.started) {
+        // Auto-start on first touch
+        this.started = true;
+        this.soundEngine.init();
+        document.getElementById('start-screen').classList.add('fade-out');
+        setTimeout(() => {
+          document.getElementById('start-screen').style.display = 'none';
+        }, 800);
+      }
       for (const touch of e.changedTouches) {
         this._onPointerDown(touch.identifier, touch.clientX, touch.clientY);
       }
@@ -362,20 +322,20 @@ class LiquidArt {
   }
 
   _onPointerDown(id, x, y) {
-    if (!this.started) return;
     const nx = x / window.innerWidth;
     const ny = 1.0 - y / window.innerHeight;
     this.pointers.set(id, { x: nx, y: ny });
-    this.lastPointers.set(id, { x: nx, y: ny });
 
     const theme = themes[this.currentTheme];
     const color = theme.splatColors[Math.floor(Math.random() * theme.splatColors.length)];
-    this.fluidSim.splat(nx, ny, 0, 0, color);
-    this.soundEngine.playRipple(nx, ny, 0.7);
+    // Big, vivid splat on touch
+    this.fluidSim.splat(nx, ny, 0, 0, { r: color.r * 3, g: color.g * 3, b: color.b * 3 });
+    if (this.soundEngine.initialized) {
+      this.soundEngine.playRipple(nx, ny, 0.7);
+    }
   }
 
   _onPointerMove(id, x, y, isDown) {
-    if (!this.started) return;
     const nx = x / window.innerWidth;
     const ny = 1.0 - y / window.innerHeight;
 
@@ -385,13 +345,17 @@ class LiquidArt {
       const dy = ny - last.y;
       const velocity = Math.sqrt(dx * dx + dy * dy);
 
-      if (velocity > 0.001) {
+      if (velocity > 0.0005) {
         const theme = themes[this.currentTheme];
         const color = theme.splatColors[Math.floor(Math.random() * theme.splatColors.length)];
-        this.fluidSim.splat(nx, ny, dx * 50, dy * 50, color);
+        // More force, more color
+        this.fluidSim.splat(nx, ny, dx * 80, dy * 80, {
+          r: color.r * 2.5,
+          g: color.g * 2.5,
+          b: color.b * 2.5,
+        });
 
-        // Throttle sound
-        if (Math.random() < 0.15) {
+        if (this.soundEngine.initialized && Math.random() < 0.12) {
           this.soundEngine.playDrag(nx, ny, velocity);
         }
       }
@@ -401,61 +365,59 @@ class LiquidArt {
 
   _onPointerUp(id) {
     this.pointers.delete(id);
-    this.lastPointers.delete(id);
   }
 
   _animate() {
     requestAnimationFrame(() => this._animate());
 
-    const dt = Math.min(this.clock.getDelta(), 0.05);
-    const time = this.clock.getElapsedTime();
+    const time = performance.now() * 0.001;
 
-    // Step fluid simulation
-    this.fluidSim.step(dt);
-
-    // Ambient splats (random gentle disturbances)
-    if (this.started && Math.random() < 0.02) {
-      const theme = themes[this.currentTheme];
-      const color = theme.splatColors[Math.floor(Math.random() * theme.splatColors.length)];
-      const x = 0.2 + Math.random() * 0.6;
-      const y = 0.2 + Math.random() * 0.6;
-      this.fluidSim.splat(x, y, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, {
-        r: color.r * 0.3,
-        g: color.g * 0.3,
-        b: color.b * 0.3,
-      });
+    // Auto splats (ambient movement)
+    this.autoSplatTimer += 1;
+    if (this.autoSplatTimer > 30) {
+      this.autoSplatTimer = 0;
+      this._doAutoSplat();
     }
 
-    // Update water material
-    this.waterMat.uniforms.uHeightMap.value = this.fluidSim.getDyeTexture();
-    this.waterMat.uniforms.uVelocityMap.value = this.fluidSim.getVelocityTexture();
-    this.waterMat.uniforms.uDyeMap.value = this.fluidSim.getDyeTexture();
-    this.waterMat.uniforms.uTime.value = time;
+    // Step fluid simulation
+    this.fluidSim.step(0.016);
 
-    // Update particles
-    this.particles.material.uniforms.uTime.value = time;
+    // === Render fluid to scene RT ===
+    this.displayMat.uniforms.uDyeMap.value = this.fluidSim.getDyeTexture();
+    this.displayMat.uniforms.uTime.value = time;
+    this._renderQuad(this.displayMat, this.sceneRT);
 
-    // Gentle camera sway
-    this.camera.position.x = Math.sin(time * 0.1) * 0.15;
-    this.camera.position.z = 3.5 + Math.cos(time * 0.08) * 0.1;
-    this.camera.lookAt(0, 0, 0);
+    // === Bloom pass ===
+    // 1. Threshold
+    this.thresholdMat.uniforms.uTexture.value = this.sceneRT.texture;
+    this._renderQuad(this.thresholdMat, this.bloomRT1);
 
-    // Theme color lerp (smooth transitions)
-    const theme = themes[this.currentTheme];
-    const u = this.waterMat.uniforms;
-    this._lerpVec3(u.uDeepColor.value, theme.deepColor, 0.03);
-    this._lerpVec3(u.uShallowColor.value, theme.shallowColor, 0.03);
-    this._lerpVec3(u.uFresnelColor.value, theme.fresnelColor, 0.03);
-    this._lerpVec3(u.uSpecularColor.value, theme.specularColor, 0.03);
+    // 2. Horizontal blur
+    this.blurMat.uniforms.uTexture.value = this.bloomRT1.texture;
+    this.blurMat.uniforms.uDirection.value.set(1, 0);
+    this._renderQuad(this.blurMat, this.bloomRT2);
 
-    // Render
-    this.renderer.render(this.scene, this.camera);
-  }
+    // 3. Vertical blur
+    this.blurMat.uniforms.uTexture.value = this.bloomRT2.texture;
+    this.blurMat.uniforms.uDirection.value.set(0, 1);
+    this._renderQuad(this.blurMat, this.bloomRT1);
 
-  _lerpVec3(target, dest, t) {
-    target.x += (dest[0] - target.x) * t;
-    target.y += (dest[1] - target.y) * t;
-    target.z += (dest[2] - target.z) * t;
+    // 4. Second blur pass for smoother bloom
+    this.blurMat.uniforms.uTexture.value = this.bloomRT1.texture;
+    this.blurMat.uniforms.uDirection.value.set(1, 0);
+    this._renderQuad(this.blurMat, this.bloomRT2);
+
+    this.blurMat.uniforms.uTexture.value = this.bloomRT2.texture;
+    this.blurMat.uniforms.uDirection.value.set(0, 1);
+    this._renderQuad(this.blurMat, this.bloomRT1);
+
+    // === Composite to screen ===
+    this.compositeMat.uniforms.uScene.value = this.sceneRT.texture;
+    this.compositeMat.uniforms.uBloom.value = this.bloomRT1.texture;
+    this.quad.material = this.compositeMat;
+    this.renderer.setRenderTarget(null);
+    this.renderer.clear();
+    this.renderer.render(this.quadScene, this.quadCamera);
   }
 }
 

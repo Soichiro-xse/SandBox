@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0a0a1a" />
+  <meta name="theme-color" content="#010108" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="description" content="Interactive liquid art experience - touch to create beautiful ripples" />
+  <meta name="description" content="Liquid Art - Mesmerizing fluid art you can touch" />
   <link rel="manifest" href="/manifest.webmanifest" />
-  <title>Liquid Art - Interactive Water Experience</title>
+  <title>Liquid Art</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
       width: 100%; height: 100%;
       overflow: hidden;
-      background: #0a0a1a;
+      background: #010108;
       touch-action: none;
       -webkit-user-select: none;
       user-select: none;
@@ -26,11 +26,13 @@
     canvas {
       display: block;
       width: 100%; height: 100%;
+      position: absolute;
+      top: 0; left: 0;
     }
     #ui-overlay {
       position: fixed;
       top: 0; left: 0; right: 0;
-      padding: 16px 20px;
+      padding: env(safe-area-inset-top, 12px) 16px 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -42,56 +44,59 @@
     #ui-overlay.hidden { opacity: 0; }
     #ui-overlay > * { pointer-events: auto; }
     .logo {
-      font-family: 'Helvetica Neue', sans-serif;
-      font-weight: 100;
-      font-size: 18px;
-      color: rgba(255,255,255,0.6);
-      letter-spacing: 4px;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+      font-weight: 200;
+      font-size: 16px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 6px;
       text-transform: uppercase;
     }
     .controls {
       display: flex;
-      gap: 12px;
+      gap: 8px;
       align-items: center;
     }
     .btn {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.7);
-      padding: 8px 16px;
-      border-radius: 24px;
-      font-size: 13px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.6);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
       cursor: pointer;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       transition: all 0.3s ease;
-      font-family: 'Helvetica Neue', sans-serif;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
     }
     .btn:hover, .btn.active {
-      background: rgba(255,255,255,0.15);
-      border-color: rgba(255,255,255,0.3);
-      color: rgba(255,255,255,0.95);
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.9);
     }
     #theme-panel {
       position: fixed;
       bottom: 0; left: 0; right: 0;
-      padding: 20px;
+      padding: 16px;
+      padding-bottom: calc(env(safe-area-inset-bottom, 8px) + 16px);
       display: flex;
       justify-content: center;
-      gap: 16px;
+      gap: 10px;
+      flex-wrap: wrap;
       z-index: 10;
       transform: translateY(100%);
       transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       pointer-events: none;
+      background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
     }
     #theme-panel.open {
       transform: translateY(0);
       pointer-events: auto;
     }
     .theme-card {
-      width: 80px;
-      height: 80px;
-      border-radius: 16px;
+      width: 60px;
+      height: 60px;
+      border-radius: 14px;
       cursor: pointer;
       border: 2px solid transparent;
       transition: all 0.3s ease;
@@ -99,32 +104,23 @@
       overflow: hidden;
     }
     .theme-card.active {
-      border-color: rgba(255,255,255,0.8);
-      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.7);
+      box-shadow: 0 0 16px rgba(255,255,255,0.15);
     }
-    .theme-card:hover { transform: scale(1.08); }
+    .theme-card:active { transform: scale(0.92); }
     .theme-label {
       position: absolute;
-      bottom: 4px; left: 0; right: 0;
+      bottom: 3px; left: 0; right: 0;
       text-align: center;
-      font-size: 10px;
+      font-size: 9px;
       color: white;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-      font-family: 'Helvetica Neue', sans-serif;
-    }
-    .theme-card .lock {
-      position: absolute;
-      top: 4px; right: 4px;
-      font-size: 12px;
-      background: rgba(0,0,0,0.5);
-      border-radius: 50%;
-      width: 20px; height: 20px;
-      display: flex; align-items: center; justify-content: center;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
     }
     #start-screen {
       position: fixed;
       inset: 0;
-      background: #0a0a1a;
+      background: transparent;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -137,33 +133,33 @@
       pointer-events: none;
     }
     #start-screen h1 {
-      font-family: 'Helvetica Neue', sans-serif;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
       font-weight: 100;
-      font-size: 42px;
-      color: rgba(255,255,255,0.8);
-      letter-spacing: 12px;
-      margin-bottom: 16px;
+      font-size: 48px;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 16px;
+      margin-bottom: 8px;
     }
     #start-screen p {
-      font-family: 'Helvetica Neue', sans-serif;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
       font-weight: 300;
-      font-size: 14px;
-      color: rgba(255,255,255,0.4);
-      letter-spacing: 2px;
-      margin-bottom: 48px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 3px;
+      margin-bottom: 40px;
     }
     .start-btn {
-      width: 80px; height: 80px;
+      width: 64px; height: 64px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.15);
       cursor: pointer;
       position: relative;
       transition: all 0.3s ease;
     }
-    .start-btn:hover {
-      background: rgba(255,255,255,0.1);
-      transform: scale(1.05);
+    .start-btn:active {
+      transform: scale(0.9);
+      background: rgba(255,255,255,0.08);
     }
     .start-btn::after {
       content: '▶';
@@ -172,22 +168,37 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: rgba(255,255,255,0.6);
-      font-size: 24px;
-      padding-left: 4px;
+      color: rgba(255,255,255,0.5);
+      font-size: 20px;
+      padding-left: 3px;
     }
     @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); }
-      50% { box-shadow: 0 0 0 20px rgba(255,255,255,0); }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.08); }
+      50% { box-shadow: 0 0 0 16px rgba(255,255,255,0); }
     }
-    .start-btn { animation: pulse 2s infinite; }
+    .start-btn { animation: pulse 2.5s infinite; }
+    .hint {
+      position: fixed;
+      bottom: 60px;
+      left: 0; right: 0;
+      text-align: center;
+      font-family: -apple-system, 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 2px;
+      z-index: 101;
+      animation: fadeHint 4s ease 2s forwards;
+    }
+    @keyframes fadeHint {
+      to { opacity: 0; }
+    }
   </style>
-  <script type="module" crossorigin src="/assets/index-BB3aUzCv.js"></script>
+  <script type="module" crossorigin src="/assets/index-Bbfcvc89.js"></script>
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body>
   <div id="start-screen">
     <h1>LIQUID</h1>
-    <p>touch the water</p>
+    <p>touch to play</p>
     <button class="start-btn" id="start-btn"></button>
   </div>
   <div id="app">
@@ -195,7 +206,7 @@
       <div class="logo">LIQUID</div>
       <div class="controls">
         <button class="btn" id="btn-theme">Themes</button>
-        <button class="btn" id="btn-sound">♪ On</button>
+        <button class="btn" id="btn-sound">♪ Off</button>
         <button class="btn" id="btn-fullscreen">⛶</button>
       </div>
     </div>
