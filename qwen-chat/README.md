@@ -84,6 +84,38 @@ response = client.chat.completions.create(
 )
 ```
 
+## Modal デプロイ (クラウドAPI)
+
+GPU不要のPCからでもデプロイ可能。ModalのA10GでAPI化される。
+
+```bash
+pip install modal
+modal setup        # 初回のみ（ブラウザでログイン）
+modal deploy modal_deploy.py
+```
+
+デプロイ後に表示されるURLでAPIが使える：
+
+```bash
+curl https://YOUR_APP.modal.run/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "こんにちは"}]}'
+```
+
+OpenAI SDK からも使える：
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="https://YOUR_APP.modal.run", api_key="dummy")
+response = client.chat.completions.create(
+    model="qwen3.5-35b-a3b",
+    messages=[{"role": "user", "content": "こんにちは"}],
+)
+```
+
+月$30の無料枠あり。個人利用なら十分。
+
 ## Kaggle / Colab
 
-`qwen_kaggle.ipynb` をアップロードして GPU T4 x2 で実行。
+`qwen_kaggle.ipynb` をアップロードして GPU T4 x2 で実行。Gradio UIが起動するのでスマホからでも使える。
