@@ -6,7 +6,7 @@ Qwen3.5-35B-A3B Uncensored — Modal デプロイスクリプト
   2. modal setup  (初回のみ、ブラウザでログイン)
   3. modal deploy modal_deploy.py
 
-デプロイ後、表示されるURLに /v1/chat/completions でリクエスト可能。
+デプロイ後、表示されるURLに /chat でリクエスト可能。
 OpenAI SDK互換。
 """
 
@@ -16,15 +16,14 @@ REPO_ID = "HauhauCS/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive"
 FILENAME = "Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf"
 MODEL_DIR = "/models"
 
+volume = modal.Volume.from_name("qwen-models", create_if_missing=True)
+
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install(
-        "llama-cpp-python",
-        "huggingface-hub",
-        "fastapi[standard]",
-    )
+    .pip_install("huggingface-hub", "fastapi[standard]")
     .run_commands(
-        f"huggingface-cli download {REPO_ID} {FILENAME} --local-dir {MODEL_DIR}"
+        "pip install llama-cpp-python"
+        " --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124"
     )
 )
 
@@ -33,22 +32,38 @@ app = modal.App("qwen-chat", image=image)
 
 @app.cls(
     gpu="A10G",
-    container_idle_timeout=300,  # 5分アイドルでスケールゼロ
-    allow_concurrent_inputs=4,
+    scaledown_window=300,
+    volumes={MODEL_DIR: volume},
 )
+@modal.concurrent(max_inputs=4)
 class Model:
     @modal.enter()
     def load(self):
+        import os
+
+        from huggingface_hub import hf_hub_download
         from llama_cpp import Llama
 
+        model_path = os.path.join(MODEL_DIR, FILENAME)
+        if not os.path.exists(model_path):
+            print(f"Downloading {FILENAME}...")
+            hf_hub_download(
+                repo_id=REPO_ID,
+                filename=FILENAME,
+                local_dir=MODEL_DIR,
+            )
+            volume.commit()
+            print("Download complete, saved to volume.")
+
         self.llm = Llama(
-            model_path=f"{MODEL_DIR}/{FILENAME}",
+            model_path=model_path,
             n_ctx=8192,
             n_gpu_layers=-1,
             verbose=False,
         )
+        print("Model loaded!")
 
-    @modal.web_endpoint(method="POST", docs=True)
+    @modal.fastapi_endpoint(method="POST", docs=True)
     def chat(self, request: dict):
         import time
         import uuid
@@ -89,7 +104,7 @@ class Model:
             "usage": response.get("usage", {}),
         }
 
-    @modal.web_endpoint(method="GET", docs=True)
+    @modal.fastapi_endpoint(method="GET", docs=True)
     def models(self):
         import time
 
