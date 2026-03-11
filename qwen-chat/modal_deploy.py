@@ -19,7 +19,11 @@ MODEL_DIR = "/models"
 volume = modal.Volume.from_name("qwen-models", create_if_missing=True)
 
 image = (
-    modal.Image.debian_slim(python_version="3.11")
+    modal.Image.from_registry(
+        "nvidia/cuda:12.4.1-runtime-ubuntu22.04",
+        add_python="3.11",
+    )
+    .apt_install("libgomp1")
     .pip_install("huggingface-hub", "fastapi[standard]")
     .run_commands(
         "pip install llama-cpp-python"
@@ -45,8 +49,12 @@ class Model:
         from llama_cpp import Llama
 
         model_path = os.path.join(MODEL_DIR, FILENAME)
-        if not os.path.exists(model_path):
+        # Re-download if file missing or too small (corrupt)
+        min_size = 15 * 1024 * 1024 * 1024  # 15GB minimum for Q4_K_M
+        if not os.path.exists(model_path) or os.path.getsize(model_path) < min_size:
             print(f"Downloading {FILENAME}...")
+            if os.path.exists(model_path):
+                os.remove(model_path)
             hf_hub_download(
                 repo_id=REPO_ID,
                 filename=FILENAME,
