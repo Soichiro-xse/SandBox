@@ -1,13 +1,11 @@
 """
 Qwen3.5-35B-A3B Uncensored — Modal デプロイスクリプト
 
-使い方:
-  1. pip install modal
-  2. modal setup  (初回のみ、ブラウザでログイン)
-  3. modal deploy modal_deploy.py
+ghcr.io/ggml-org/llama.cpp の公式CUDAイメージを使用。
+llama-server が内蔵 (OpenAI互換)。
 
-デプロイ後、表示されるURLに /chat でリクエスト可能。
-OpenAI SDK互換。
+使い方:
+  modal deploy modal_deploy.py
 """
 
 import modal
@@ -20,15 +18,11 @@ volume = modal.Volume.from_name("qwen-models", create_if_missing=True)
 
 image = (
     modal.Image.from_registry(
-        "nvidia/cuda:12.4.1-runtime-ubuntu22.04",
+        "ghcr.io/ggml-org/llama.cpp:server-cuda",
         add_python="3.11",
+        setup_dockerfile_commands=["ENTRYPOINT []"],
     )
-    .apt_install("libgomp1")
-    .pip_install("huggingface-hub", "fastapi[standard]")
-    .run_commands(
-        "pip install llama-cpp-python"
-        " --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124"
-    )
+    .pip_install("huggingface-hub", "requests", "fastapi[standard]")
 )
 
 app = modal.App("qwen-chat", image=image)
@@ -38,19 +32,21 @@ app = modal.App("qwen-chat", image=image)
     gpu="A10G",
     scaledown_window=300,
     volumes={MODEL_DIR: volume},
+    timeout=600,
 )
-@modal.concurrent(max_inputs=4)
+@modal.concurrent(max_inputs=8)
 class Model:
     @modal.enter()
-    def load(self):
+    def start_server(self):
         import os
+        import subprocess
+        import time
 
+        import requests
         from huggingface_hub import hf_hub_download
-        from llama_cpp import Llama
 
         model_path = os.path.join(MODEL_DIR, FILENAME)
-        # Re-download if file missing or too small (corrupt)
-        min_size = 15 * 1024 * 1024 * 1024  # 15GB minimum for Q4_K_M
+        min_size = 15 * 1024 * 1024 * 1024
         if not os.path.exists(model_path) or os.path.getsize(model_path) < min_size:
             print(f"Downloading {FILENAME}...")
             if os.path.exists(model_path):
@@ -61,69 +57,58 @@ class Model:
                 local_dir=MODEL_DIR,
             )
             volume.commit()
-            print("Download complete, saved to volume.")
+            print("Download complete.")
 
-        self.llm = Llama(
-            model_path=model_path,
-            n_ctx=8192,
-            n_gpu_layers=-1,
-            verbose=False,
+        fsize = os.path.getsize(model_path) / (1024**3)
+        print(f"Model: {fsize:.2f} GB")
+
+        # Start llama-server on localhost:8080
+        self.proc = subprocess.Popen(
+            [
+                "/app/llama-server",
+                "--model", model_path,
+                "--host", "127.0.0.1",
+                "--port", "8080",
+                "--n-gpu-layers", "-1",
+                "--ctx-size", "4096",
+                "--threads", "4",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
-        print("Model loaded!")
+
+        # Wait for server to be ready
+        for i in range(180):
+            try:
+                r = requests.get("http://127.0.0.1:8080/health", timeout=2)
+                if r.status_code == 200:
+                    print(f"llama-server ready after {i}s")
+                    return
+            except Exception:
+                pass
+            time.sleep(1)
+
+        raise RuntimeError("llama-server failed to start")
+
+    @modal.exit()
+    def stop_server(self):
+        if hasattr(self, "proc"):
+            self.proc.terminate()
 
     @modal.fastapi_endpoint(method="POST", docs=True)
     def chat(self, request: dict):
-        import time
-        import uuid
+        import requests
 
-        messages = request.get("messages", [])
-        temperature = request.get("temperature", 0.7)
-        top_p = request.get("top_p", 0.8)
-        top_k = request.get("top_k", 20)
-        repeat_penalty = request.get("repeat_penalty", 1.5)
-        max_tokens = request.get("max_tokens", 2048)
-
-        response = self.llm.create_chat_completion(
-            messages=messages,
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            repeat_penalty=repeat_penalty,
-            max_tokens=max_tokens,
+        resp = requests.post(
+            "http://127.0.0.1:8080/v1/chat/completions",
+            json=request,
+            timeout=300,
         )
-
-        return {
-            "id": f"chatcmpl-{uuid.uuid4().hex[:8]}",
-            "object": "chat.completion",
-            "created": int(time.time()),
-            "model": "qwen3.5-35b-a3b",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": response["choices"][0]["message"]["content"],
-                    },
-                    "finish_reason": response["choices"][0].get(
-                        "finish_reason", "stop"
-                    ),
-                }
-            ],
-            "usage": response.get("usage", {}),
-        }
+        return resp.json()
 
     @modal.fastapi_endpoint(method="GET", docs=True)
     def models(self):
-        import time
+        import requests
 
-        return {
-            "object": "list",
-            "data": [
-                {
-                    "id": "qwen3.5-35b-a3b",
-                    "object": "model",
-                    "created": int(time.time()),
-                    "owned_by": "self-hosted",
-                }
-            ],
-        }
+        resp = requests.get("http://127.0.0.1:8080/v1/models", timeout=10)
+        return resp.json()

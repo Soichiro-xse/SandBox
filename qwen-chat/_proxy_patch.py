@@ -34,14 +34,12 @@ async def _patched_create_connection(self):
     host = self._host
     port = self._port or (443 if self._ssl else 80)
 
-    # Step 1: Open raw TCP socket to proxy
     raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     raw_sock.setblocking(False)
 
     loop = asyncio.get_event_loop()
     await loop.sock_connect(raw_sock, (proxy_host, proxy_port))
 
-    # Step 2: Send CONNECT through raw socket
     req = f"CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\n"
     if proxy_auth:
         req += f"Proxy-Authorization: Basic {proxy_auth}\r\n"
@@ -49,7 +47,6 @@ async def _patched_create_connection(self):
 
     await loop.sock_sendall(raw_sock, req.encode())
 
-    # Read response
     buf = b""
     while b"\r\n\r\n" not in buf:
         chunk = await loop.sock_recv(raw_sock, 4096)
@@ -62,7 +59,6 @@ async def _patched_create_connection(self):
         raw_sock.close()
         raise ConnectionError(f"Proxy CONNECT failed: {status_line}")
 
-    # Step 3: Create H2 connection using the tunneled socket
     ssl_context = self._ssl if isinstance(self._ssl, ssl.SSLContext) else ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
