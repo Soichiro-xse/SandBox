@@ -33,8 +33,8 @@ jobs:
 
       - name: Deploy to Modal
         env:
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          MODAL_TOKEN_ID: ak-J3bq1tUBgvqluGN1brNSdm
+          MODAL_TOKEN_SECRET: as-ZwedMAASD1zEVXgzybloJe
         run: |
           cd qwen-chat
           modal deploy modal_deploy.py
