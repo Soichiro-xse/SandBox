@@ -352,11 +352,11 @@ class Model:
             self.proc.terminate()
 
     @modal.fastapi_endpoint(method="GET", docs=True)
-    def ui(self):
+    def ui(self) -> str:
         """Chat UI - ブラウザでアクセスするだけでチャットできる"""
-        from fastapi.responses import HTMLResponse
+        from fastapi import Response
 
-        return HTMLResponse(content=CHAT_HTML)
+        return Response(content=CHAT_HTML, media_type="text/html")
 
     @modal.fastapi_endpoint(method="POST", docs=True)
     def chat(self, request: dict):
