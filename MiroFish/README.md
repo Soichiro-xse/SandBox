@@ -151,7 +151,7 @@ npm run setup:backend
 npm run dev
 ```
 
-**服务地址：**
+**开发模式服务地址：**
 - 前端：`http://localhost:3000`
 - 后端 API：`http://localhost:5001`
 
@@ -168,13 +168,20 @@ npm run frontend  # 仅启动前端
 # 1. 配置环境变量（同源码部署）
 cp .env.example .env
 
-# 2. 拉取镜像并启动
-docker compose up -d
+# 2. 构建并启动（前后端一体）
+docker compose up -d --build
 ```
 
-默认会读取根目录下的 `.env`，并映射端口 `3000（前端）/5001（后端）`
+本番ビルドではフロントエンドが静的ファイルとして Flask から配信されます。アクセスは `http://localhost:5001` のみ。
 
-> 在 `docker-compose.yml` 中已通过注释提供加速镜像地址，可按需替换
+### 三、Railway デプロイ（推奨）
+
+1. [Railway](https://railway.app) でプロジェクトを作成
+2. このリポジトリの `MiroFish/` ディレクトリを接続
+3. 環境変数（`.env` の内容）をRailway Dashboardで設定
+4. 自動でDockerfileからビルド・デプロイされます
+
+デプロイ後は Railway が発行する URL（`https://xxx.up.railway.app`）でアクセスできます。
 
 ## 📬 更多交流
 

@@ -151,7 +151,7 @@ npm run setup:backend
 npm run dev
 ```
 
-**Service URLs:**
+**Dev Service URLs:**
 - Frontend: `http://localhost:3000`
 - Backend API: `http://localhost:5001`
 
@@ -168,13 +168,20 @@ npm run frontend  # Start frontend only
 # 1. Configure environment variables (same as source deployment)
 cp .env.example .env
 
-# 2. Pull image and start
-docker compose up -d
+# 2. Build and start (frontend + backend in one container)
+docker compose up -d --build
 ```
 
-Reads `.env` from root directory by default, maps ports `3000 (frontend) / 5001 (backend)`
+In production, the frontend is served as static files from Flask. Access via `http://localhost:5001` only.
 
-> Mirror address for faster pulling is provided as comments in `docker-compose.yml`, replace if needed.
+### Option 3: Railway Deployment (Recommended)
+
+1. Create a project on [Railway](https://railway.app)
+2. Connect the `MiroFish/` directory of this repository
+3. Set environment variables (`.env` contents) in Railway Dashboard
+4. Automatically builds and deploys from Dockerfile
+
+After deployment, access via the Railway-issued URL (`https://xxx.up.railway.app`).
 
 ## 📬 Join the Conversation
 
