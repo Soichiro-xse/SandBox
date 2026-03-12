@@ -97,6 +97,7 @@ class Model:
 
     @modal.fastapi_endpoint(method="POST", docs=True)
     def chat(self, request: dict):
+        """Non-streaming chat endpoint."""
         import requests
 
         resp = requests.post(
@@ -105,6 +106,35 @@ class Model:
             timeout=300,
         )
         return resp.json()
+
+    @modal.fastapi_endpoint(method="POST", docs=True)
+    def chat_stream(self, request: dict):
+        """Streaming chat endpoint. Returns SSE stream."""
+        import requests
+        from fastapi.responses import StreamingResponse
+
+        request["stream"] = True
+
+        resp = requests.post(
+            "http://127.0.0.1:8080/v1/chat/completions",
+            json=request,
+            stream=True,
+            timeout=300,
+        )
+
+        def generate():
+            for line in resp.iter_lines():
+                if line:
+                    yield line.decode("utf-8") + "\n\n"
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     @modal.fastapi_endpoint(method="GET", docs=True)
     def models(self):

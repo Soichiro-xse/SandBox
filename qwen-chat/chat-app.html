@@ -168,8 +168,8 @@ body {
 <div id="modal-overlay">
   <div id="modal-box">
     <h2>API設定</h2>
-    <label>API URL</label>
-    <input id="cfg-url" placeholder="https://your-app.modal.run/chat">
+    <label>API URL (末尾の /chat や /chat_stream は不要)</label>
+    <input id="cfg-url" placeholder="https://your-app--xxx.modal.run">
     <label>システムプロンプト (任意)</label>
     <textarea id="cfg-system" placeholder="あなたは..."></textarea>
     <div class="modal-btns">
@@ -180,10 +180,11 @@ body {
 </div>
 
 <script>
-let API_URL = localStorage.getItem('qwen_api_url') || 'https://acidys230--qwen-chat-model-chat.modal.run';
+let BASE_URL = localStorage.getItem('qwen_api_url') || 'https://acidys230--qwen-chat-model-chat-stream.modal.run';
 let SYSTEM_PROMPT = localStorage.getItem('qwen_system') || '';
 let history = [];
 let busy = false;
+let abortController = null;
 
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('input');
@@ -212,12 +213,25 @@ function addMsg(role, text) {
   return div;
 }
 
+function getStreamURL() {
+  // Support both direct stream URL and base URL
+  let url = BASE_URL.replace(/\/+$/, '');
+  if (!url.endsWith('/chat_stream') && !url.endsWith('/chat')) {
+    url += '';  // use as-is, will append below
+  }
+  // If it already ends with a specific endpoint, use it
+  if (url.endsWith('/chat_stream') || url.endsWith('/chat')) {
+    return url;
+  }
+  return url;
+}
+
 async function send() {
   if (busy) return;
   const text = inputEl.value.trim();
   if (!text) return;
 
-  if (!API_URL) {
+  if (!BASE_URL) {
     showSetup();
     return;
   }
@@ -236,37 +250,97 @@ async function send() {
 
   busy = true;
   sendBtn.disabled = true;
-  const typingEl = addMsg('assistant typing', '...');
+  const replyEl = addMsg('assistant typing', '');
+  abortController = new AbortController();
+
+  const streamURL = getStreamURL();
 
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(streamURL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, temperature: 0.7, max_tokens: 2048 }),
+      body: JSON.stringify({ messages, temperature: 0.7, max_tokens: 2048, stream: true }),
+      signal: abortController.signal,
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const reply = data.choices[0].message.content;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${errText.slice(0, 200)}`);
+    }
 
-    typingEl.textContent = reply;
-    typingEl.classList.remove('typing');
-    history.push({ role: 'assistant', content: reply });
+    const contentType = res.headers.get('content-type') || '';
+
+    if (contentType.includes('text/event-stream') || contentType.includes('text/plain')) {
+      // SSE streaming response
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          const data = trimmed.slice(5).trim();
+          if (data === '[DONE]') continue;
+
+          try {
+            const json = JSON.parse(data);
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullText += delta;
+              replyEl.textContent = fullText;
+              replyEl.classList.remove('typing');
+              messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+          } catch (e) {
+            // skip unparseable chunks
+          }
+        }
+      }
+
+      if (fullText) {
+        history.push({ role: 'assistant', content: fullText });
+      } else {
+        replyEl.textContent = '(空の応答)';
+        replyEl.classList.remove('typing');
+        history.pop();
+      }
+    } else {
+      // Non-streaming JSON response (fallback)
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content || JSON.stringify(data);
+      replyEl.textContent = reply;
+      replyEl.classList.remove('typing');
+      history.push({ role: 'assistant', content: reply });
+    }
   } catch (e) {
-    typingEl.textContent = `エラー: ${e.message}`;
-    typingEl.classList.remove('typing');
-    typingEl.classList.remove('assistant');
-    typingEl.classList.add('system-msg');
+    if (e.name === 'AbortError') {
+      replyEl.textContent = '(中断)';
+    } else {
+      replyEl.textContent = `エラー: ${e.message}`;
+    }
+    replyEl.classList.remove('typing');
+    replyEl.classList.remove('assistant');
+    replyEl.classList.add('system-msg');
     history.pop(); // remove failed user msg from history
   } finally {
     busy = false;
     sendBtn.disabled = false;
+    abortController = null;
     inputEl.focus();
   }
 }
 
 function showSetup() {
-  document.getElementById('cfg-url').value = API_URL;
+  document.getElementById('cfg-url').value = BASE_URL;
   document.getElementById('cfg-system').value = SYSTEM_PROMPT;
   document.getElementById('modal-overlay').classList.add('show');
 }
@@ -276,9 +350,9 @@ function hideSetup() {
 }
 
 function saveSetup() {
-  API_URL = document.getElementById('cfg-url').value.trim();
+  BASE_URL = document.getElementById('cfg-url').value.trim();
   SYSTEM_PROMPT = document.getElementById('cfg-system').value.trim();
-  localStorage.setItem('qwen_api_url', API_URL);
+  localStorage.setItem('qwen_api_url', BASE_URL);
   localStorage.setItem('qwen_system', SYSTEM_PROMPT);
   hideSetup();
   if (history.length === 0) {
@@ -287,7 +361,7 @@ function saveSetup() {
 }
 
 // Show setup on first launch if no URL
-if (!API_URL) {
+if (!BASE_URL) {
   setTimeout(showSetup, 300);
 }
 </script>
