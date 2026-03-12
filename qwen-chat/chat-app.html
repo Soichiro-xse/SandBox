@@ -168,8 +168,8 @@ body {
 <div id="modal-overlay">
   <div id="modal-box">
     <h2>API設定</h2>
-    <label>API URL (末尾の /chat や /chat_stream は不要)</label>
-    <input id="cfg-url" placeholder="https://your-app--xxx.modal.run">
+    <label>API URL</label>
+    <input id="cfg-url" placeholder="https://your-app.modal.run/chat">
     <label>システムプロンプト (任意)</label>
     <textarea id="cfg-system" placeholder="あなたは..."></textarea>
     <div class="modal-btns">
@@ -180,11 +180,17 @@ body {
 </div>
 
 <script>
-let BASE_URL = localStorage.getItem('qwen_api_url') || 'https://acidys230--qwen-chat-model-chat-stream.modal.run';
+// Derive Modal endpoint URLs from the current page's hostname
+// Modal URL pattern: user--app-class-method.modal.run
+// ui → chat-stream (underscore becomes hyphen in Modal URLs)
+function deriveModalUrl(method) {
+  const host = window.location.hostname;
+  return 'https://' + host.replace(/-ui\.modal\.run$/, '-' + method + '.modal.run');
+}
+let API_URL = localStorage.getItem('qwen_api_url') || deriveModalUrl('chat-stream');
 let SYSTEM_PROMPT = localStorage.getItem('qwen_system') || '';
 let history = [];
 let busy = false;
-let abortController = null;
 
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('input');
@@ -213,25 +219,12 @@ function addMsg(role, text) {
   return div;
 }
 
-function getStreamURL() {
-  // Support both direct stream URL and base URL
-  let url = BASE_URL.replace(/\/+$/, '');
-  if (!url.endsWith('/chat_stream') && !url.endsWith('/chat')) {
-    url += '';  // use as-is, will append below
-  }
-  // If it already ends with a specific endpoint, use it
-  if (url.endsWith('/chat_stream') || url.endsWith('/chat')) {
-    return url;
-  }
-  return url;
-}
-
 async function send() {
   if (busy) return;
   const text = inputEl.value.trim();
   if (!text) return;
 
-  if (!BASE_URL) {
+  if (!API_URL) {
     showSetup();
     return;
   }
@@ -250,17 +243,13 @@ async function send() {
 
   busy = true;
   sendBtn.disabled = true;
-  const replyEl = addMsg('assistant typing', '');
-  abortController = new AbortController();
-
-  const streamURL = getStreamURL();
+  const typingEl = addMsg('assistant typing', '...');
 
   try {
-    const res = await fetch(streamURL, {
+    const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages, temperature: 0.7, max_tokens: 2048, stream: true }),
-      signal: abortController.signal,
     });
 
     if (!res.ok) {
@@ -271,7 +260,7 @@ async function send() {
     const contentType = res.headers.get('content-type') || '';
 
     if (contentType.includes('text/event-stream') || contentType.includes('text/plain')) {
-      // SSE streaming response
+      // SSE streaming
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
@@ -296,51 +285,44 @@ async function send() {
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
               fullText += delta;
-              replyEl.textContent = fullText;
-              replyEl.classList.remove('typing');
+              typingEl.textContent = fullText;
+              typingEl.classList.remove('typing');
               messagesEl.scrollTop = messagesEl.scrollHeight;
             }
-          } catch (e) {
-            // skip unparseable chunks
-          }
+          } catch (e) { /* skip non-JSON lines */ }
         }
       }
 
       if (fullText) {
         history.push({ role: 'assistant', content: fullText });
       } else {
-        replyEl.textContent = '(空の応答)';
-        replyEl.classList.remove('typing');
+        typingEl.textContent = '(空の応答)';
+        typingEl.classList.remove('typing');
         history.pop();
       }
     } else {
-      // Non-streaming JSON response (fallback)
+      // Non-streaming fallback
       const data = await res.json();
       const reply = data.choices?.[0]?.message?.content || JSON.stringify(data);
-      replyEl.textContent = reply;
-      replyEl.classList.remove('typing');
+      typingEl.textContent = reply;
+      typingEl.classList.remove('typing');
       history.push({ role: 'assistant', content: reply });
     }
   } catch (e) {
-    if (e.name === 'AbortError') {
-      replyEl.textContent = '(中断)';
-    } else {
-      replyEl.textContent = `エラー: ${e.message}`;
-    }
-    replyEl.classList.remove('typing');
-    replyEl.classList.remove('assistant');
-    replyEl.classList.add('system-msg');
+    typingEl.textContent = `エラー: ${e.message}`;
+    typingEl.classList.remove('typing');
+    typingEl.classList.remove('assistant');
+    typingEl.classList.add('system-msg');
     history.pop(); // remove failed user msg from history
   } finally {
     busy = false;
     sendBtn.disabled = false;
-    abortController = null;
     inputEl.focus();
   }
 }
 
 function showSetup() {
-  document.getElementById('cfg-url').value = BASE_URL;
+  document.getElementById('cfg-url').value = API_URL;
   document.getElementById('cfg-system').value = SYSTEM_PROMPT;
   document.getElementById('modal-overlay').classList.add('show');
 }
@@ -350,9 +332,9 @@ function hideSetup() {
 }
 
 function saveSetup() {
-  BASE_URL = document.getElementById('cfg-url').value.trim();
+  API_URL = document.getElementById('cfg-url').value.trim();
   SYSTEM_PROMPT = document.getElementById('cfg-system').value.trim();
-  localStorage.setItem('qwen_api_url', BASE_URL);
+  localStorage.setItem('qwen_api_url', API_URL);
   localStorage.setItem('qwen_system', SYSTEM_PROMPT);
   hideSetup();
   if (history.length === 0) {
@@ -361,7 +343,7 @@ function saveSetup() {
 }
 
 // Show setup on first launch if no URL
-if (!BASE_URL) {
+if (!API_URL) {
   setTimeout(showSetup, 300);
 }
 </script>
