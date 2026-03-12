@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Qwen Chat</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+#header {
+  padding: 12px 16px;
+  background: #16213e;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#header h1 { font-size: 16px; flex: 1; }
+#setup-btn {
+  background: #e94560;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.msg.user {
+  align-self: flex-end;
+  background: #e94560;
+  border-bottom-right-radius: 4px;
+}
+.msg.assistant {
+  align-self: flex-start;
+  background: #16213e;
+  border-bottom-left-radius: 4px;
+}
+.msg.system-msg {
+  align-self: center;
+  background: #333;
+  font-size: 13px;
+  color: #aaa;
+  border-radius: 8px;
+}
+#input-area {
+  padding: 10px 12px;
+  background: #16213e;
+  border-top: 1px solid #333;
+  display: flex;
+  gap: 8px;
+}
+#input {
+  flex: 1;
+  background: #0f3460;
+  border: none;
+  color: #eee;
+  padding: 10px 14px;
+  border-radius: 20px;
+  font-size: 15px;
+  outline: none;
+  resize: none;
+  max-height: 120px;
+  line-height: 1.4;
+}
+#input::placeholder { color: #888; }
+#send-btn {
+  background: #e94560;
+  border: none;
+  color: white;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#send-btn:disabled { opacity: 0.4; }
+.typing { opacity: 0.6; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+/* Setup modal */
+#modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#modal-overlay.show { display: flex; }
+#modal-box {
+  background: #16213e;
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+}
+#modal-box h2 { font-size: 18px; margin-bottom: 16px; }
+#modal-box label { font-size: 13px; color: #aaa; display: block; margin-bottom: 4px; }
+#modal-box input, #modal-box textarea {
+  width: 100%;
+  background: #0f3460;
+  border: 1px solid #333;
+  color: #eee;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  outline: none;
+}
+#modal-box textarea { height: 60px; resize: vertical; }
+.modal-btns { display: flex; gap: 8px; margin-top: 8px; }
+.modal-btns button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+#save-btn { background: #e94560; color: white; }
+#cancel-btn { background: #333; color: #ccc; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Qwen Chat</h1>
+  <button id="setup-btn" onclick="showSetup()">設定</button>
+</div>
+
+<div id="messages"></div>
+
+<div id="input-area">
+  <textarea id="input" rows="1" placeholder="メッセージを入力..." enterkeyhint="send"></textarea>
+  <button id="send-btn" onclick="send()">&#9654;</button>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal-box">
+    <h2>API設定</h2>
+    <label>API URL (末尾の /chat や /chat_stream は不要)</label>
+    <input id="cfg-url" placeholder="https://your-app--xxx.modal.run">
+    <label>システムプロンプト (任意)</label>
+    <textarea id="cfg-system" placeholder="あなたは..."></textarea>
+    <div class="modal-btns">
+      <button id="cancel-btn" onclick="hideSetup()">キャンセル</button>
+      <button id="save-btn" onclick="saveSetup()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let BASE_URL = localStorage.getItem('qwen_api_url') || 'https://acidys230--qwen-chat-model-chat-stream.modal.run';
+let SYSTEM_PROMPT = localStorage.getItem('qwen_system') || '';
+let history = [];
+let busy = false;
+let abortController = null;
+
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('send-btn');
+
+// Auto-resize textarea
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+});
+
+// Enter to send (Shift+Enter for newline)
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+});
+
+function addMsg(role, text) {
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.textContent = text;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return div;
+}
+
+function getStreamURL() {
+  // Support both direct stream URL and base URL
+  let url = BASE_URL.replace(/\/+$/, '');
+  if (!url.endsWith('/chat_stream') && !url.endsWith('/chat')) {
+    url += '';  // use as-is, will append below
+  }
+  // If it already ends with a specific endpoint, use it
+  if (url.endsWith('/chat_stream') || url.endsWith('/chat')) {
+    return url;
+  }
+  return url;
+}
+
+async function send() {
+  if (busy) return;
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  if (!BASE_URL) {
+    showSetup();
+    return;
+  }
+
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  addMsg('user', text);
+
+  history.push({ role: 'user', content: text });
+
+  const messages = [];
+  if (SYSTEM_PROMPT) {
+    messages.push({ role: 'system', content: SYSTEM_PROMPT });
+  }
+  messages.push(...history);
+
+  busy = true;
+  sendBtn.disabled = true;
+  const replyEl = addMsg('assistant typing', '');
+  abortController = new AbortController();
+
+  const streamURL = getStreamURL();
+
+  try {
+    const res = await fetch(streamURL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, temperature: 0.7, max_tokens: 2048, stream: true }),
+      signal: abortController.signal,
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${errText.slice(0, 200)}`);
+    }
+
+    const contentType = res.headers.get('content-type') || '';
+
+    if (contentType.includes('text/event-stream') || contentType.includes('text/plain')) {
+      // SSE streaming response
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          const data = trimmed.slice(5).trim();
+          if (data === '[DONE]') continue;
+
+          try {
+            const json = JSON.parse(data);
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullText += delta;
+              replyEl.textContent = fullText;
+              replyEl.classList.remove('typing');
+              messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+          } catch (e) {
+            // skip unparseable chunks
+          }
+        }
+      }
+
+      if (fullText) {
+        history.push({ role: 'assistant', content: fullText });
+      } else {
+        replyEl.textContent = '(空の応答)';
+        replyEl.classList.remove('typing');
+        history.pop();
+      }
+    } else {
+      // Non-streaming JSON response (fallback)
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content || JSON.stringify(data);
+      replyEl.textContent = reply;
+      replyEl.classList.remove('typing');
+      history.push({ role: 'assistant', content: reply });
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      replyEl.textContent = '(中断)';
+    } else {
+      replyEl.textContent = `エラー: ${e.message}`;
+    }
+    replyEl.classList.remove('typing');
+    replyEl.classList.remove('assistant');
+    replyEl.classList.add('system-msg');
+    history.pop(); // remove failed user msg from history
+  } finally {
+    busy = false;
+    sendBtn.disabled = false;
+    abortController = null;
+    inputEl.focus();
+  }
+}
+
+function showSetup() {
+  document.getElementById('cfg-url').value = BASE_URL;
+  document.getElementById('cfg-system').value = SYSTEM_PROMPT;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function hideSetup() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+function saveSetup() {
+  BASE_URL = document.getElementById('cfg-url').value.trim();
+  SYSTEM_PROMPT = document.getElementById('cfg-system').value.trim();
+  localStorage.setItem('qwen_api_url', BASE_URL);
+  localStorage.setItem('qwen_system', SYSTEM_PROMPT);
+  hideSetup();
+  if (history.length === 0) {
+    addMsg('system-msg', '設定完了！メッセージを送ってみてください');
+  }
+}
+
+// Show setup on first launch if no URL
+if (!BASE_URL) {
+  setTimeout(showSetup, 300);
+}
+</script>
+</body>
+</html>
