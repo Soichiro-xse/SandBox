@@ -156,6 +156,7 @@ body {
 <div id="header">
   <h1>Qwen Chat</h1>
   <button id="setup-btn" onclick="showSetup()">設定</button>
+  <button id="setup-btn" onclick="clearAll()" style="background:#333">クリア</button>
 </div>
 
 <div id="messages"></div>
@@ -187,7 +188,15 @@ function deriveModalUrl(method) {
   const host = window.location.hostname;
   return 'https://' + host.replace(/-ui\.modal\.run$/, '-' + method + '.modal.run');
 }
-let API_URL = localStorage.getItem('qwen_api_url') || deriveModalUrl('chat-stream');
+// Always use derived URL by default; only use localStorage if user explicitly set a custom URL
+const DEFAULT_URL = deriveModalUrl('chat-stream');
+let savedUrl = localStorage.getItem('qwen_api_url');
+// Clear stale/broken localStorage URLs (from old deploys)
+if (savedUrl && savedUrl === DEFAULT_URL) {
+  localStorage.removeItem('qwen_api_url');
+  savedUrl = null;
+}
+let API_URL = savedUrl || DEFAULT_URL;
 let SYSTEM_PROMPT = localStorage.getItem('qwen_system') || '';
 let history = [];
 let busy = false;
@@ -340,6 +349,14 @@ function saveSetup() {
   if (history.length === 0) {
     addMsg('system-msg', '設定完了！メッセージを送ってみてください');
   }
+}
+
+function clearAll() {
+  history = [];
+  messagesEl.innerHTML = '';
+  localStorage.removeItem('qwen_api_url');
+  API_URL = DEFAULT_URL;
+  addMsg('system-msg', 'リセットしました (URL: ' + API_URL + ')');
 }
 
 // Show setup on first launch if no URL
