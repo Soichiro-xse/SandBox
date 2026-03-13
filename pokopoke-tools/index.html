@@ -10,9 +10,33 @@
 <body>
   <!-- ヘッダー -->
   <header class="header">
-    <h1>ぽこポケ攻略ツールズ</h1>
-    <p>ぽこ あ ポケモン 総合攻略ツール for Nintendo Switch 2</p>
+    <div class="header-inner">
+      <!-- ポケボールSVG -->
+      <svg class="header-pokeball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="48" fill="white" stroke="rgba(0,0,0,0.3)" stroke-width="3"/>
+        <path d="M2 50 Q2 4 50 4 Q98 4 98 50 Z" fill="#E3350D"/>
+        <rect x="2" y="47" width="96" height="6" fill="rgba(0,0,0,0.4)" rx="3"/>
+        <circle cx="50" cy="50" r="13" fill="white" stroke="rgba(0,0,0,0.3)" stroke-width="3"/>
+        <circle cx="50" cy="50" r="7" fill="#E3350D"/>
+        <circle cx="50" cy="50" r="3" fill="white"/>
+      </svg>
+      <div class="header-text">
+        <h1>ぽこポケ攻略ツールズ</h1>
+        <p>ぽこ あ ポケモン 総合攻略ツール for Nintendo Switch 2</p>
+      </div>
+      <!-- ポケモンスプライト装飾 -->
+      <div class="header-sprites">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" alt="ピカチュウ" title="ピカチュウ">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="イーブイ" title="イーブイ">
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/175.png" alt="トゲピー" title="トゲピー">
+      </div>
+    </div>
   </header>
+
+  <!-- スプライトスクロールバナー -->
+  <div class="sprite-banner" aria-hidden="true">
+    <div class="sprite-banner-inner" id="spriteBanner"></div>
+  </div>
 
   <!-- タブナビゲーション -->
   <nav class="tab-nav" id="tabNav">
