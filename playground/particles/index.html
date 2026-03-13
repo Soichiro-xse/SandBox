@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Particle Gravity</title>
+<style>
+* { margin: 0; padding: 0; }
+body { background: #000; overflow: hidden; }
+canvas { display: block; touch-action: none; }
+#info { position: fixed; bottom: 15px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,0.5); font: 14px Arial; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info">タップで重力点を追加 | 長押しで削除</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const particles = [];
+const attractors = [];
+const PARTICLE_COUNT = 600;
+const MAX_ATTRACTORS = 8;
+
+// Color palette
+const hueBase = Math.random() * 360;
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = (Math.random() - 0.5) * 2;
+    this.life = 0.5 + Math.random() * 0.5;
+    this.hue = hueBase + Math.random() * 60;
+    this.size = 1.5 + Math.random() * 2;
+  }
+  update() {
+    for (const a of attractors) {
+      const dx = a.x - this.x;
+      const dy = a.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      const force = a.mass / (dist * dist) * 50;
+      this.vx += (dx / dist) * force;
+      this.vy += (dy / dist) * force;
+    }
+
+    // Damping
+    this.vx *= 0.99;
+    this.vy *= 0.99;
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Speed-based color shift
+    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    this.hue = hueBase + speed * 10;
+    this.life = Math.min(1, 0.3 + speed * 0.1);
+
+    // Wrap around
+    if (this.x < 0) this.x += W;
+    if (this.x > W) this.x -= W;
+    if (this.y < 0) this.y += H;
+    if (this.y > H) this.y -= H;
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${this.hue}, 80%, 60%, ${this.life})`;
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  particles.push(new Particle());
+}
+
+// Start with one attractor at center
+attractors.push({ x: W / 2, y: H / 2, mass: 5, hue: Math.random() * 360 });
+
+// Touch / mouse
+let longPressTimer = null;
+let isLongPress = false;
+
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  isLongPress = false;
+  longPressTimer = setTimeout(() => {
+    isLongPress = true;
+    // Remove nearest attractor
+    if (attractors.length > 0) {
+      let minDist = Infinity, minIdx = 0;
+      for (let i = 0; i < attractors.length; i++) {
+        const dx = attractors[i].x - e.clientX;
+        const dy = attractors[i].y - e.clientY;
+        const d = dx * dx + dy * dy;
+        if (d < minDist) { minDist = d; minIdx = i; }
+      }
+      attractors.splice(minIdx, 1);
+    }
+  }, 500);
+});
+
+canvas.addEventListener('pointerup', e => {
+  e.preventDefault();
+  clearTimeout(longPressTimer);
+  if (!isLongPress && attractors.length < MAX_ATTRACTORS) {
+    attractors.push({
+      x: e.clientX,
+      y: e.clientY,
+      mass: 3 + Math.random() * 5,
+      hue: Math.random() * 360
+    });
+  }
+});
+
+canvas.addEventListener('pointermove', e => {
+  // Do nothing, keep it simple
+});
+
+function drawAttractors() {
+  for (const a of attractors) {
+    // Glow
+    const grad = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 30 + a.mass * 5);
+    grad.addColorStop(0, `hsla(${a.hue}, 100%, 70%, 0.6)`);
+    grad.addColorStop(1, `hsla(${a.hue}, 100%, 50%, 0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 30 + a.mass * 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core
+    ctx.fillStyle = `hsla(${a.hue}, 100%, 80%, 0.9)`;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function loop() {
+  // Fade trail
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  for (const p of particles) {
+    p.update();
+    p.draw();
+  }
+
+  drawAttractors();
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

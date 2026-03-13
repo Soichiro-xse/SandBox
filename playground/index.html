@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Flappy Fusion</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000; overflow: hidden; touch-action: none; user-select: none; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ===== GAME STATE =====
+let state = 'title'; // title, playing, gameover
+let score = 0;
+let bestScore = 0;
+let mergeCombo = 0;
+let comboTimer = 0;
+let screenShake = 0;
+let time = 0;
+
+// ===== BIRD =====
+const bird = {
+  x: 0, y: 0, vy: 0, angle: 0, size: 14,
+  trail: [],
+  reset() {
+    this.x = W * 0.2;
+    this.y = H * 0.5;
+    this.vy = 0;
+    this.angle = 0;
+    this.trail = [];
+  },
+  flap() { this.vy = -6.5; },
+  update() {
+    this.vy += 0.32; // gravity
+    // Attractor influence on bird (gentle)
+    for (const a of attractors) {
+      const dx = a.x - this.x;
+      const dy = a.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      const force = a.mass * 15 / (dist * dist);
+      this.vy += (dy / dist) * force * 0.3;
+    }
+    this.y += this.vy;
+    this.angle = Math.max(-0.5, Math.min(1.2, this.vy * 0.08));
+
+    // Trail
+    this.trail.push({ x: this.x, y: this.y, life: 1 });
+    if (this.trail.length > 20) this.trail.shift();
+    for (const t of this.trail) t.life -= 0.05;
+
+    // Boundaries
+    if (this.y < this.size) { this.y = this.size; this.vy = 0; }
+    if (this.y > H - this.size) {
+      return true; // dead
+    }
+    return false;
+  },
+  draw() {
+    // Trail with fluid-like effect
+    for (let i = 0; i < this.trail.length - 1; i++) {
+      const t = this.trail[i];
+      if (t.life <= 0) continue;
+      const hue = 45 + (1 - t.life) * 30;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, this.size * t.life * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${t.life * 0.3})`;
+      ctx.fill();
+    }
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+
+    // Glow
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size * 2.5);
+    glow.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
+    glow.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.size * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.size + 2, this.size, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#DAA520';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Wing
+    const wingFlap = Math.sin(time * 12) * 0.4;
+    ctx.fillStyle = '#FFA500';
+    ctx.beginPath();
+    ctx.ellipse(-3, 3 + wingFlap * 3, 8, 5, wingFlap - 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(7, -5, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(8, -5, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Beak
+    ctx.fillStyle = '#FF6347';
+    ctx.beginPath();
+    ctx.moveTo(13, 0);
+    ctx.lineTo(20, 2);
+    ctx.lineTo(13, 5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+};
+
+// ===== NUMBER BLOCKS (2048 mechanic) =====
+const blocks = [];
+const BLOCK_COLORS = {
+  2:    '#eee4da', 4:    '#ede0c8', 8:    '#f2b179',
+  16:   '#f59563', 32:   '#f67c5f', 64:   '#f65e3b',
+  128:  '#edcf72', 256:  '#edcc61', 512:  '#edc850',
+  1024: '#edc53f', 2048: '#edc22e'
+};
+
+function spawnBlock() {
+  const values = [2, 2, 2, 4, 4, 8];
+  const val = values[Math.floor(Math.random() * values.length)];
+  const side = Math.random();
+  let x, y, vx, vy;
+  if (side < 0.5) {
+    x = W + 30;
+    y = Math.random() * H * 0.8 + H * 0.1;
+    vx = -1 - Math.random() * 1.5;
+    vy = (Math.random() - 0.5) * 1;
+  } else {
+    x = Math.random() * W;
+    y = -30;
+    vx = (Math.random() - 0.5) * 1;
+    vy = 0.5 + Math.random() * 1;
+  }
+  blocks.push({ x, y, vx, vy, val, size: 28, merging: 0 });
+}
+
+function updateBlocks() {
+  // Spawn
+  if (blocks.length < 8 + Math.floor(score / 200) && Math.random() < 0.02) {
+    spawnBlock();
+  }
+
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const b = blocks[i];
+
+    // Attractor influence
+    for (const a of attractors) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      const force = a.mass * 30 / (dist * dist);
+      b.vx += (dx / dist) * force * 0.5;
+      b.vy += (dy / dist) * force * 0.5;
+    }
+
+    // Gentle gravity
+    b.vy += 0.02;
+
+    // Damping
+    b.vx *= 0.995;
+    b.vy *= 0.995;
+
+    b.x += b.vx;
+    b.y += b.vy;
+
+    if (b.merging > 0) b.merging -= 0.05;
+
+    // Remove if off screen
+    if (b.x < -80 || b.x > W + 80 || b.y > H + 80) {
+      blocks.splice(i, 1);
+      continue;
+    }
+
+    // Collision with bird -> push block
+    const dx = b.x - bird.x;
+    const dy = b.y - bird.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < bird.size + b.size) {
+      const nx = dx / dist;
+      const ny = dy / dist;
+      b.vx += nx * 3;
+      b.vy += ny * 3;
+    }
+  }
+
+  // Block-block collision & merge
+  for (let i = 0; i < blocks.length; i++) {
+    for (let j = i + 1; j < blocks.length; j++) {
+      const a = blocks[i], b = blocks[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const minDist = a.size + b.size;
+
+      if (dist < minDist) {
+        if (a.val === b.val) {
+          // MERGE!
+          const newVal = a.val * 2;
+          a.val = newVal;
+          a.merging = 1;
+          a.vx = (a.vx + b.vx) * 0.5;
+          a.vy = (a.vy + b.vy) * 0.5;
+          a.x = (a.x + b.x) * 0.5;
+          a.y = (a.y + b.y) * 0.5;
+
+          // Score
+          score += newVal;
+          mergeCombo++;
+          comboTimer = 2;
+
+          // Effects!
+          spawnMergeExplosion(a.x, a.y, newVal);
+          screenShake = Math.min(15, 3 + newVal / 32);
+
+          blocks.splice(j, 1);
+
+          if (newVal === 2048) {
+            // Big celebration
+            for (let k = 0; k < 5; k++) {
+              spawnMergeExplosion(
+                a.x + (Math.random() - 0.5) * 100,
+                a.y + (Math.random() - 0.5) * 100,
+                2048
+              );
+            }
+          }
+          break;
+        } else {
+          // Bounce
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const overlap = minDist - dist;
+          a.x -= nx * overlap * 0.5;
+          a.y -= ny * overlap * 0.5;
+          b.x += nx * overlap * 0.5;
+          b.y += ny * overlap * 0.5;
+          const relV = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+          a.vx -= nx * relV * 0.5;
+          a.vy -= ny * relV * 0.5;
+          b.vx += nx * relV * 0.5;
+          b.vy += ny * relV * 0.5;
+        }
+      }
+    }
+  }
+}
+
+function drawBlocks() {
+  for (const b of blocks) {
+    const col = BLOCK_COLORS[b.val] || '#edc22e';
+    const scale = 1 + b.merging * 0.3;
+    const sz = b.size * scale;
+
+    // Glow
+    const glow = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, sz * 2);
+    glow.addColorStop(0, col + '40');
+    glow.addColorStop(1, col + '00');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, sz * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Block
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    roundRect(ctx, b.x - sz, b.y - sz, sz * 2, sz * 2, 6);
+    ctx.fill();
+
+    // Number
+    ctx.fillStyle = b.val >= 8 ? '#f9f6f2' : '#776e65';
+    ctx.font = `bold ${b.val >= 1024 ? 12 : b.val >= 128 ? 14 : 16}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(b.val, b.x, b.y);
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ===== GRAVITY ATTRACTORS =====
+const attractors = [];
+function spawnAttractors() {
+  attractors.length = 0;
+  attractors.push(
+    { x: W * 0.7, y: H * 0.3, mass: 4, hue: 200, phase: 0 },
+    { x: W * 0.5, y: H * 0.7, mass: 3, hue: 300, phase: 2 }
+  );
+}
+
+function updateAttractors() {
+  for (const a of attractors) {
+    a.phase += 0.005;
+    // Gentle orbit
+    a.x += Math.sin(a.phase) * 0.3;
+    a.y += Math.cos(a.phase * 0.7) * 0.2;
+  }
+}
+
+function drawAttractors() {
+  for (const a of attractors) {
+    const pulse = 1 + Math.sin(time * 3 + a.phase) * 0.15;
+    const r = (20 + a.mass * 5) * pulse;
+    const grad = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, r);
+    grad.addColorStop(0, `hsla(${a.hue}, 80%, 60%, 0.5)`);
+    grad.addColorStop(0.5, `hsla(${a.hue}, 80%, 50%, 0.15)`);
+    grad.addColorStop(1, `hsla(${a.hue}, 80%, 40%, 0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core
+    ctx.fillStyle = `hsla(${a.hue}, 100%, 80%, 0.8)`;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ===== PARTICLES =====
+const particles = [];
+const bgParticles = [];
+const MAX_BG_PARTICLES = 200;
+
+function initBgParticles() {
+  for (let i = 0; i < MAX_BG_PARTICLES; i++) {
+    bgParticles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      size: 0.5 + Math.random() * 2,
+      hue: 220 + Math.random() * 40,
+      alpha: 0.2 + Math.random() * 0.4
+    });
+  }
+}
+
+function updateBgParticles() {
+  for (const p of bgParticles) {
+    for (const a of attractors) {
+      const dx = a.x - p.x;
+      const dy = a.y - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      const force = a.mass * 20 / (dist * dist);
+      p.vx += (dx / dist) * force * 0.3;
+      p.vy += (dy / dist) * force * 0.3;
+    }
+    p.vx *= 0.98;
+    p.vy *= 0.98;
+    p.x += p.vx;
+    p.y += p.vy;
+
+    const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    p.hue = 220 + speed * 20;
+
+    if (p.x < 0) p.x += W;
+    if (p.x > W) p.x -= W;
+    if (p.y < 0) p.y += H;
+    if (p.y > H) p.y -= H;
+  }
+}
+
+function drawBgParticles() {
+  for (const p of bgParticles) {
+    ctx.fillStyle = `hsla(${p.hue}, 70%, 60%, ${p.alpha})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Merge explosion particles
+function spawnMergeExplosion(x, y, val) {
+  const count = Math.min(40, 10 + val / 4);
+  const hue = val >= 64 ? 40 : val >= 16 ? 25 : 200;
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+    const speed = 2 + Math.random() * 5 + val / 100;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.01 + Math.random() * 0.02,
+      size: 2 + Math.random() * 4,
+      hue: hue + Math.random() * 40,
+      type: 'burst'
+    });
+  }
+  // Fluid ring
+  for (let i = 0; i < 12; i++) {
+    const angle = (Math.PI * 2 * i) / 12;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * 1.5,
+      vy: Math.sin(angle) * 1.5,
+      life: 1,
+      decay: 0.015,
+      size: 8 + val / 32,
+      hue: hue + 60,
+      type: 'fluid'
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    if (p.type === 'fluid') {
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * p.life);
+      grad.addColorStop(0, `hsla(${p.hue}, 100%, 70%, ${p.life * 0.4})`);
+      grad.addColorStop(1, `hsla(${p.hue}, 100%, 50%, 0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = `hsla(${p.hue}, 100%, 65%, ${p.life})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ===== HUD =====
+function drawHUD() {
+  // Score
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = 'bold 20px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText('SCORE', 15, 30);
+  ctx.font = 'bold 28px Arial';
+  ctx.fillText(score, 15, 60);
+
+  // Best
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '14px Arial';
+  ctx.fillText('BEST: ' + bestScore, 15, 82);
+
+  // Combo
+  if (comboTimer > 0) {
+    const alpha = Math.min(1, comboTimer);
+    ctx.fillStyle = `rgba(255, 200, 50, ${alpha})`;
+    ctx.font = `bold ${20 + mergeCombo * 3}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${mergeCombo}x COMBO!`, W / 2, H * 0.15);
+  }
+}
+
+// ===== INPUT =====
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (state === 'title') {
+    startGame();
+  } else if (state === 'playing') {
+    bird.flap();
+  } else if (state === 'gameover') {
+    startGame();
+  }
+});
+
+function startGame() {
+  state = 'playing';
+  score = 0;
+  mergeCombo = 0;
+  comboTimer = 0;
+  bird.reset();
+  blocks.length = 0;
+  particles.length = 0;
+  spawnAttractors();
+  // Spawn initial blocks
+  for (let i = 0; i < 5; i++) spawnBlock();
+}
+
+// ===== SCREENS =====
+function drawTitle() {
+  // Darken
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+
+  // Title with gradient
+  ctx.save();
+  const titleGrad = ctx.createLinearGradient(W / 2 - 120, 0, W / 2 + 120, 0);
+  titleGrad.addColorStop(0, '#f093fb');
+  titleGrad.addColorStop(0.5, '#f5576c');
+  titleGrad.addColorStop(1, '#4facfe');
+  ctx.fillStyle = titleGrad;
+  ctx.font = 'bold 42px Arial';
+  ctx.fillText('FLAPPY FUSION', W / 2, H * 0.3);
+  ctx.restore();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '16px Arial';
+  ctx.fillText('タップで鳥を飛ばす', W / 2, H * 0.42);
+  ctx.fillText('同じ数字のブロックをぶつけて合体!', W / 2, H * 0.48);
+  ctx.fillText('重力に引かれる宇宙で2048を目指せ', W / 2, H * 0.54);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px Arial';
+  const pulse = 0.7 + Math.sin(time * 4) * 0.3;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('TAP TO START', W / 2, H * 0.7);
+  ctx.globalAlpha = 1;
+
+  if (bestScore > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '16px Arial';
+    ctx.fillText('Best Score: ' + bestScore, W / 2, H * 0.78);
+  }
+}
+
+function drawGameOver() {
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 38px Arial';
+  ctx.fillText('GAME OVER', W / 2, H * 0.35);
+
+  ctx.font = '24px Arial';
+  ctx.fillText('Score: ' + score, W / 2, H * 0.45);
+  ctx.fillStyle = 'rgba(255,200,50,0.8)';
+  ctx.fillText('Best: ' + bestScore, W / 2, H * 0.52);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px Arial';
+  const pulse = 0.7 + Math.sin(time * 4) * 0.3;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('タップでリトライ', W / 2, H * 0.65);
+  ctx.globalAlpha = 1;
+}
+
+// ===== MAIN LOOP =====
+initBgParticles();
+spawnAttractors();
+
+function loop() {
+  time += 1 / 60;
+
+  // Screen shake
+  ctx.save();
+  if (screenShake > 0) {
+    ctx.translate(
+      (Math.random() - 0.5) * screenShake,
+      (Math.random() - 0.5) * screenShake
+    );
+    screenShake *= 0.9;
+    if (screenShake < 0.5) screenShake = 0;
+  }
+
+  // Background fade (fluid trail effect)
+  ctx.fillStyle = 'rgba(8, 5, 20, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars (static)
+  if (time < 0.1) {
+    // drawn once via fade
+  }
+
+  // Background particles
+  updateBgParticles();
+  drawBgParticles();
+  updateAttractors();
+  drawAttractors();
+
+  if (state === 'playing') {
+    const dead = bird.update();
+    updateBlocks();
+    updateParticles();
+
+    comboTimer -= 1 / 60;
+    if (comboTimer <= 0) { mergeCombo = 0; comboTimer = 0; }
+
+    if (dead) {
+      state = 'gameover';
+      bestScore = Math.max(bestScore, score);
+      screenShake = 10;
+      // Death particles
+      for (let i = 0; i < 30; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 4;
+        particles.push({
+          x: bird.x, y: bird.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1, decay: 0.02,
+          size: 3 + Math.random() * 3,
+          hue: 40 + Math.random() * 20,
+          type: 'burst'
+        });
+      }
+    }
+  } else {
+    updateParticles();
+  }
+
+  // Draw order
+  drawBlocks();
+  drawParticles();
+  if (state !== 'title') {
+    bird.draw();
+    drawHUD();
+  }
+
+  if (state === 'title') drawTitle();
+  if (state === 'gameover') drawGameOver();
+
+  ctx.restore();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>2048</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #faf8ef;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100vh; overflow: hidden;
+  font-family: 'Arial', sans-serif;
+  touch-action: none;
+  user-select: none;
+}
+h1 { font-size: 48px; color: #776e65; margin-bottom: 5px; }
+#score-bar { display: flex; gap: 10px; margin-bottom: 10px; }
+.score-box {
+  background: #bbada0; color: #fff; padding: 5px 20px;
+  border-radius: 5px; text-align: center; min-width: 80px;
+}
+.score-box .label { font-size: 11px; text-transform: uppercase; }
+.score-box .val { font-size: 22px; font-weight: bold; }
+#board {
+  background: #bbada0; border-radius: 8px; padding: 10px;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px; position: relative;
+}
+.cell {
+  width: 75px; height: 75px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold; font-size: 28px;
+  transition: none;
+}
+#overlay {
+  position: absolute; inset: 0; background: rgba(255,255,255,0.7);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; border-radius: 8px;
+}
+#overlay.show { display: flex; }
+#overlay h2 { font-size: 36px; color: #776e65; }
+#overlay button {
+  margin-top: 15px; padding: 10px 30px; font-size: 18px;
+  background: #8f7a66; color: #fff; border: none; border-radius: 5px;
+  cursor: pointer;
+}
+#new-game {
+  margin-top: 8px; padding: 8px 20px; font-size: 14px;
+  background: #8f7a66; color: #fff; border: none; border-radius: 5px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<h1>2048</h1>
+<div id="score-bar">
+  <div class="score-box"><div class="label">Score</div><div class="val" id="score">0</div></div>
+  <div class="score-box"><div class="label">Best</div><div class="val" id="best">0</div></div>
+</div>
+<button id="new-game">New Game</button>
+<div style="height:10px"></div>
+<div id="board">
+  <div id="overlay"><h2 id="msg">Game Over!</h2><button id="retry">もう一回</button></div>
+</div>
+<script>
+const SIZE = 4;
+let grid, score, best = 0;
+
+const COLORS = {
+  0:    { bg: '#cdc1b4', fg: '#cdc1b4' },
+  2:    { bg: '#eee4da', fg: '#776e65' },
+  4:    { bg: '#ede0c8', fg: '#776e65' },
+  8:    { bg: '#f2b179', fg: '#f9f6f2' },
+  16:   { bg: '#f59563', fg: '#f9f6f2' },
+  32:   { bg: '#f67c5f', fg: '#f9f6f2' },
+  64:   { bg: '#f65e3b', fg: '#f9f6f2' },
+  128:  { bg: '#edcf72', fg: '#f9f6f2' },
+  256:  { bg: '#edcc61', fg: '#f9f6f2' },
+  512:  { bg: '#edc850', fg: '#f9f6f2' },
+  1024: { bg: '#edc53f', fg: '#f9f6f2' },
+  2048: { bg: '#edc22e', fg: '#f9f6f2' },
+};
+
+const board = document.getElementById('board');
+const overlay = document.getElementById('overlay');
+const msgEl = document.getElementById('msg');
+let cells = [];
+
+function initBoard() {
+  // Remove old cells
+  cells.forEach(c => c.remove());
+  cells = [];
+  for (let i = 0; i < SIZE * SIZE; i++) {
+    const div = document.createElement('div');
+    div.className = 'cell';
+    board.appendChild(div);
+    cells.push(div);
+  }
+}
+
+function newGame() {
+  grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+  score = 0;
+  overlay.classList.remove('show');
+  initBoard();
+  addRandom();
+  addRandom();
+  render();
+}
+
+function addRandom() {
+  const empty = [];
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
+      if (grid[r][c] === 0) empty.push([r, c]);
+  if (empty.length === 0) return;
+  const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+  grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+}
+
+function render() {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const v = grid[r][c];
+      const cell = cells[r * SIZE + c];
+      const col = COLORS[v] || { bg: '#3c3a32', fg: '#f9f6f2' };
+      cell.style.background = col.bg;
+      cell.style.color = col.fg;
+      cell.textContent = v || '';
+      cell.style.fontSize = v >= 1024 ? '20px' : v >= 128 ? '24px' : '28px';
+    }
+  }
+  document.getElementById('score').textContent = score;
+  document.getElementById('best').textContent = best;
+}
+
+function slide(row) {
+  let arr = row.filter(v => v !== 0);
+  let merged = false;
+  for (let i = 0; i < arr.length - 1; i++) {
+    if (arr[i] === arr[i + 1]) {
+      arr[i] *= 2;
+      score += arr[i];
+      best = Math.max(best, score);
+      arr.splice(i + 1, 1);
+      merged = true;
+    }
+  }
+  while (arr.length < SIZE) arr.push(0);
+  const changed = row.some((v, i) => v !== arr[i]);
+  return { result: arr, changed };
+}
+
+function move(dir) {
+  let moved = false;
+  const g = grid;
+
+  if (dir === 'left') {
+    for (let r = 0; r < SIZE; r++) {
+      const { result, changed } = slide(g[r]);
+      if (changed) moved = true;
+      g[r] = result;
+    }
+  } else if (dir === 'right') {
+    for (let r = 0; r < SIZE; r++) {
+      const { result, changed } = slide([...g[r]].reverse());
+      if (changed) moved = true;
+      g[r] = result.reverse();
+    }
+  } else if (dir === 'up') {
+    for (let c = 0; c < SIZE; c++) {
+      const col = [g[0][c], g[1][c], g[2][c], g[3][c]];
+      const { result, changed } = slide(col);
+      if (changed) moved = true;
+      for (let r = 0; r < SIZE; r++) g[r][c] = result[r];
+    }
+  } else if (dir === 'down') {
+    for (let c = 0; c < SIZE; c++) {
+      const col = [g[3][c], g[2][c], g[1][c], g[0][c]];
+      const { result, changed } = slide(col);
+      if (changed) moved = true;
+      for (let r = 0; r < SIZE; r++) g[r][c] = result[3 - r];
+    }
+  }
+
+  if (moved) {
+    addRandom();
+    render();
+    if (checkWin()) {
+      msgEl.textContent = '2048達成!';
+      overlay.classList.add('show');
+    } else if (checkLose()) {
+      msgEl.textContent = 'Game Over!';
+      overlay.classList.add('show');
+    }
+  }
+}
+
+function checkWin() {
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
+      if (grid[r][c] === 2048) return true;
+  return false;
+}
+
+function checkLose() {
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++) {
+      if (grid[r][c] === 0) return false;
+      if (c < SIZE - 1 && grid[r][c] === grid[r][c + 1]) return false;
+      if (r < SIZE - 1 && grid[r][c] === grid[r + 1][c]) return false;
+    }
+  return true;
+}
+
+// Swipe detection
+let startX, startY;
+document.addEventListener('pointerdown', e => { startX = e.clientX; startY = e.clientY; });
+document.addEventListener('pointerup', e => {
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+  if (Math.max(absDx, absDy) < 20) return;
+  if (absDx > absDy) {
+    move(dx > 0 ? 'right' : 'left');
+  } else {
+    move(dy > 0 ? 'down' : 'up');
+  }
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+  if (map[e.key]) { e.preventDefault(); move(map[e.key]); }
+});
+
+document.getElementById('retry').addEventListener('click', newGame);
+document.getElementById('new-game').addEventListener('click', newGame);
+
+newGame();
+</script>
+</body>
+</html>
