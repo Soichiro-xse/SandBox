@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Opus 4.6 — Creative Showcase</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+    cursor: crosshair;
+  }
+  canvas { display: block; position: fixed; top: 0; left: 0; z-index: 1; }
+  #overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 2; pointer-events: none;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  #title {
+    font-size: clamp(1.5rem, 5vw, 4rem);
+    color: rgba(255,255,255,0.9);
+    text-shadow: 0 0 40px rgba(120,180,255,0.5), 0 0 80px rgba(120,180,255,0.2);
+    letter-spacing: 0.3em;
+    animation: breathe 4s ease-in-out infinite;
+    text-align: center;
+    padding: 0 1rem;
+  }
+  #subtitle {
+    font-size: clamp(0.7rem, 1.5vw, 1rem);
+    color: rgba(180,200,255,0.6);
+    margin-top: 1rem;
+    letter-spacing: 0.5em;
+    animation: breathe 4s ease-in-out infinite 0.5s;
+  }
+  #instructions {
+    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+    font-size: 0.75rem; color: rgba(255,255,255,0.3);
+    z-index: 3; letter-spacing: 0.2em;
+    animation: fadeIn 3s ease-in 2s both;
+  }
+  #fps {
+    position: fixed; top: 1rem; right: 1rem;
+    font-size: 0.6rem; color: rgba(255,255,255,0.15);
+    z-index: 3;
+  }
+  #mode-indicator {
+    position: fixed; top: 1rem; left: 1rem;
+    font-size: 0.7rem; color: rgba(180,200,255,0.4);
+    z-index: 3; letter-spacing: 0.1em;
+    transition: opacity 0.5s;
+  }
+  #mobile-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    z-index: 10; padding: 0.5rem;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  }
+  #mobile-nav .nav-dots {
+    display: flex; justify-content: center; gap: 1.2rem;
+    padding: 0.5rem 0;
+  }
+  #mobile-nav .dot {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid rgba(180,200,255,0.4);
+    background: rgba(0,0,0,0.5);
+    color: rgba(200,220,255,0.8);
+    font-size: 0.7rem; font-family: 'Courier New', monospace;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.3s;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: auto;
+  }
+  #mobile-nav .dot.active {
+    border-color: rgba(120,180,255,0.9);
+    background: rgba(60,120,200,0.3);
+    box-shadow: 0 0 15px rgba(120,180,255,0.4);
+  }
+  #swipe-hint {
+    display: none;
+    position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%);
+    font-size: 0.65rem; color: rgba(255,255,255,0.25);
+    z-index: 10; letter-spacing: 0.15em;
+    animation: fadeIn 2s ease-in 3s both;
+    pointer-events: none;
+  }
+  @media (pointer: coarse), (max-width: 768px) {
+    #mobile-nav { display: block; }
+    #swipe-hint { display: block; }
+    #instructions { display: none; }
+  }
+  @keyframes breathe {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.02); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="overlay">
+  <div id="title">CLAUDE OPUS 4.6</div>
+  <div id="subtitle">CREATIVE SHOWCASE</div>
+</div>
+<div id="instructions">CLICK to shift reality — MOVE to bend space — SPACE to transcend — 1-5 to change dimensions</div>
+<div id="fps"></div>
+<div id="mode-indicator">DIMENSION: NEBULA</div>
+<div id="mobile-nav">
+  <div class="nav-dots">
+    <div class="dot active" data-mode="0">1</div>
+    <div class="dot" data-mode="1">2</div>
+    <div class="dot" data-mode="2">3</div>
+    <div class="dot" data-mode="3">4</div>
+    <div class="dot" data-mode="4">5</div>
+  </div>
+</div>
+<div id="swipe-hint">SWIPE LEFT/RIGHT or TAP dots to change — TOUCH to interact</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  Claude Opus 4.6 Creative Showcase
+//  A generative art system with 5 distinct visual dimensions
+//  Built entirely from scratch — no libraries, no frameworks
+// ═══════════════════════════════════════════════════════════════
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const fpsEl = document.getElementById('fps');
+const modeEl = document.getElementById('mode-indicator');
+
+let W, H, cx, cy;
+let mouse = { x: 0, y: 0, pressed: false };
+let time = 0;
+let mode = 0;
+let transitionProgress = 1;
+let targetMode = 0;
+const modeNames = ['NEBULA', 'NEURAL NETWORK', 'QUANTUM FIELD', 'DNA HELIX', 'CONSCIOUSNESS'];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2; cy = H / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Mouse tracking ──
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('mousedown', () => { mouse.pressed = true; spawnBurst(); });
+window.addEventListener('mouseup', () => { mouse.pressed = false; });
+window.addEventListener('touchmove', e => {
+  e.preventDefault();
+  mouse.x = e.touches[0].clientX;
+  mouse.y = e.touches[0].clientY;
+}, { passive: false });
+let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+window.addEventListener('touchstart', e => {
+  mouse.pressed = true;
+  mouse.x = e.touches[0].clientX;
+  mouse.y = e.touches[0].clientY;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchStartTime = Date.now();
+  spawnBurst();
+});
+window.addEventListener('touchend', e => {
+  mouse.pressed = false;
+  const dx = (e.changedTouches[0]?.clientX || 0) - touchStartX;
+  const dy = (e.changedTouches[0]?.clientY || 0) - touchStartY;
+  const dt = Date.now() - touchStartTime;
+  // Swipe detection: fast horizontal movement
+  if (dt < 400 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (dx < 0) {
+      // swipe left → next
+      targetMode = (targetMode + 1) % 5;
+    } else {
+      // swipe right → prev
+      targetMode = (targetMode - 1 + 5) % 5;
+    }
+    transitionProgress = 0;
+    modeEl.textContent = `DIMENSION: ${modeNames[targetMode]}`;
+    updateMobileDots();
+  }
+});
+
+// Mobile nav dots
+const dots = document.querySelectorAll('#mobile-nav .dot');
+function updateMobileDots() {
+  dots.forEach(d => d.classList.toggle('active', parseInt(d.dataset.mode) === targetMode));
+}
+dots.forEach(dot => {
+  dot.addEventListener('touchstart', e => {
+    e.stopPropagation();
+    const m = parseInt(dot.dataset.mode);
+    if (m !== targetMode) {
+      targetMode = m;
+      transitionProgress = 0;
+      modeEl.textContent = `DIMENSION: ${modeNames[targetMode]}`;
+      updateMobileDots();
+    }
+  }, { passive: true });
+  dot.addEventListener('click', e => {
+    e.stopPropagation();
+    const m = parseInt(dot.dataset.mode);
+    if (m !== targetMode) {
+      targetMode = m;
+      transitionProgress = 0;
+      modeEl.textContent = `DIMENSION: ${modeNames[targetMode]}`;
+      updateMobileDots();
+    }
+  });
+});
+
+// ── Keyboard controls ──
+window.addEventListener('keydown', e => {
+  if (e.key >= '1' && e.key <= '5') {
+    targetMode = parseInt(e.key) - 1;
+    transitionProgress = 0;
+    modeEl.textContent = `DIMENSION: ${modeNames[targetMode]}`;
+  }
+  if (e.key === ' ') {
+    e.preventDefault();
+    targetMode = (targetMode + 1) % 5;
+    transitionProgress = 0;
+    modeEl.textContent = `DIMENSION: ${modeNames[targetMode]}`;
+  }
+});
+
+// ── Particle system ──
+const MAX_PARTICLES = 800;
+const particles = [];
+
+class Particle {
+  constructor(x, y, vx, vy, life, color, size) {
+    this.x = x; this.y = y;
+    this.vx = vx; this.vy = vy;
+    this.life = life; this.maxLife = life;
+    this.color = color; this.size = size;
+    this.trail = [];
+    this.maxTrail = 8;
+  }
+  update(dt) {
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > this.maxTrail) this.trail.shift();
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.life -= dt;
+  }
+  get alive() { return this.life > 0; }
+  get alpha() { return Math.max(0, this.life / this.maxLife); }
+}
+
+function spawnBurst() {
+  const count = 30;
+  for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+    const speed = 80 + Math.random() * 200;
+    const hue = (time * 30 + i * 12) % 360;
+    particles.push(new Particle(
+      mouse.x, mouse.y,
+      Math.cos(angle) * speed, Math.sin(angle) * speed,
+      1.5 + Math.random() * 2,
+      `hsl(${hue}, 80%, 70%)`,
+      2 + Math.random() * 3
+    ));
+  }
+}
+
+// ── Noise function (simplex-like) ──
+const perm = new Uint8Array(512);
+const grad = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
+for (let i = 0; i < 256; i++) perm[i] = i;
+for (let i = 255; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [perm[i], perm[j]] = [perm[j], perm[i]];
+}
+for (let i = 0; i < 256; i++) perm[i + 256] = perm[i];
+
+function noise2D(x, y) {
+  const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+  const xf = x - Math.floor(x), yf = y - Math.floor(y);
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const g00 = grad[perm[X + perm[Y]] & 7];
+  const g10 = grad[perm[X + 1 + perm[Y]] & 7];
+  const g01 = grad[perm[X + perm[Y + 1]] & 7];
+  const g11 = grad[perm[X + 1 + perm[Y + 1]] & 7];
+  const n00 = g00[0] * xf + g00[1] * yf;
+  const n10 = g10[0] * (xf - 1) + g10[1] * yf;
+  const n01 = g01[0] * xf + g01[1] * (yf - 1);
+  const n11 = g11[0] * (xf - 1) + g11[1] * (yf - 1);
+  return n00 + u * (n10 - n00) + v * (n01 - n00 + u * (n11 - n01 - n10 + n00));
+}
+
+function fbm(x, y, octaves = 4) {
+  let val = 0, amp = 0.5, freq = 1;
+  for (let i = 0; i < octaves; i++) {
+    val += amp * noise2D(x * freq, y * freq);
+    amp *= 0.5; freq *= 2;
+  }
+  return val;
+}
+
+// ═══════════════════════════════════════
+//  MODE 0: NEBULA — Cosmic gas clouds
+// ═══════════════════════════════════════
+function drawNebula(dt) {
+  const imgData = ctx.getImageData(0, 0, W, H);
+  const d = imgData.data;
+  const isMobile = 'ontouchstart' in window;
+  const step = isMobile ? 8 : 4; // bigger step on mobile for performance
+  const t = time * 0.15;
+  const mx = (mouse.x - cx) / W;
+  const my = (mouse.y - cy) / H;
+
+  for (let y = 0; y < H; y += step) {
+    for (let x = 0; x < W; x += step) {
+      const nx = x / W * 3 + mx * 0.5;
+      const ny = y / H * 3 + my * 0.5;
+
+      const n1 = fbm(nx + t, ny + t * 0.7, 5);
+      const n2 = fbm(nx * 1.5 - t * 0.5, ny * 1.5 + t * 0.3, 4);
+      const n3 = fbm(nx * 0.5 + n1, ny * 0.5 + n2, 3);
+
+      const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2) / (W * 0.5);
+      const vignette = 1 - dist * 0.6;
+
+      const r = Math.max(0, Math.min(255, (n3 * 0.5 + 0.5) * 120 * vignette + n1 * 80));
+      const g = Math.max(0, Math.min(255, (n1 * 0.5 + 0.5) * 60 * vignette + n2 * 40));
+      const b = Math.max(0, Math.min(255, (n2 * 0.5 + 0.5) * 200 * vignette + n3 * 100));
+
+      for (let dy = 0; dy < step && y + dy < H; dy++) {
+        for (let dx = 0; dx < step && x + dx < W; dx++) {
+          const i = ((y + dy) * W + (x + dx)) * 4;
+          d[i] = r; d[i+1] = g; d[i+2] = b; d[i+3] = 255;
+        }
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Stars
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 60; i++) {
+    const sx = ((Math.sin(i * 127.1 + time * 0.1) * 0.5 + 0.5) * W);
+    const sy = ((Math.cos(i * 311.7 + time * 0.07) * 0.5 + 0.5) * H);
+    const brightness = Math.sin(time * 2 + i) * 0.3 + 0.7;
+    ctx.globalAlpha = brightness * 0.8;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1 + Math.sin(i * 43.3) * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ═══════════════════════════════════════
+//  MODE 1: NEURAL NETWORK
+// ═══════════════════════════════════════
+const nodes = [];
+function initNodes() {
+  if (nodes.length > 0) return;
+  for (let i = 0; i < 120; i++) {
+    nodes.push({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 30,
+      vy: (Math.random() - 0.5) * 30,
+      radius: 2 + Math.random() * 3,
+      pulse: Math.random() * Math.PI * 2,
+      active: false, activationTime: 0
+    });
+  }
+}
+
+function drawNeuralNetwork(dt) {
+  initNodes();
+  const connectionDist = 180;
+  const mx = mouse.x, my = mouse.y;
+
+  // Update nodes
+  for (const n of nodes) {
+    const dx = mx - n.x, dy = my - n.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 200) {
+      n.vx += (dx / dist) * 50 * dt;
+      n.vy += (dy / dist) * 50 * dt;
+      if (dist < 100) { n.active = true; n.activationTime = time; }
+    }
+    n.vx *= 0.98; n.vy *= 0.98;
+    n.x += n.vx * dt; n.y += n.vy * dt;
+    n.pulse += dt * 3;
+
+    if (n.x < 0 || n.x > W) n.vx *= -1;
+    if (n.y < 0 || n.y > H) n.vy *= -1;
+    n.x = Math.max(0, Math.min(W, n.x));
+    n.y = Math.max(0, Math.min(H, n.y));
+
+    if (time - n.activationTime > 2) n.active = false;
+  }
+
+  // Draw connections
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[j].x - nodes[i].x;
+      const dy = nodes[j].y - nodes[i].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < connectionDist) {
+        const alpha = (1 - dist / connectionDist) * 0.4;
+        const bothActive = nodes[i].active && nodes[j].active;
+        if (bothActive) {
+          const grad = ctx.createLinearGradient(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y);
+          grad.addColorStop(0, `rgba(100,200,255,${alpha * 2})`);
+          grad.addColorStop(0.5, `rgba(255,150,255,${alpha * 3})`);
+          grad.addColorStop(1, `rgba(100,200,255,${alpha * 2})`);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 2;
+
+          // Signal pulse along connection
+          const pulsePos = (Math.sin(time * 5 - i * 0.1) * 0.5 + 0.5);
+          const px = nodes[i].x + dx * pulsePos;
+          const py = nodes[i].y + dy * pulsePos;
+          ctx.fillStyle = `rgba(255,255,255,${alpha * 3})`;
+          ctx.beginPath();
+          ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = `rgba(60,120,180,${alpha})`;
+          ctx.lineWidth = 0.5;
+        }
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[j].x, nodes[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Draw nodes
+  for (const n of nodes) {
+    const glow = Math.sin(n.pulse) * 0.3 + 0.7;
+    const isActive = n.active;
+    const size = n.radius * (isActive ? 1.5 : 1) * glow;
+
+    if (isActive) {
+      const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, size * 8);
+      g.addColorStop(0, 'rgba(120,200,255,0.3)');
+      g.addColorStop(1, 'rgba(120,200,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, size * 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = isActive ? `rgba(200,230,255,${glow})` : `rgba(80,150,200,${glow * 0.7})`;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ═══════════════════════════════════════
+//  MODE 2: QUANTUM FIELD
+// ═══════════════════════════════════════
+function drawQuantumField(dt) {
+  const gridSize = 25;
+  const cols = Math.ceil(W / gridSize) + 1;
+  const rows = Math.ceil(H / gridSize) + 1;
+  const t = time;
+  const mx = (mouse.x - cx) / W;
+  const my = (mouse.y - cy) / H;
+
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      const x = i * gridSize;
+      const y = j * gridSize;
+      const nx = i * 0.08 + t * 0.3 + mx;
+      const ny = j * 0.08 + t * 0.2 + my;
+
+      const n = fbm(nx, ny, 3);
+      const angle = n * Math.PI * 4;
+      const magnitude = (Math.sin(n * 6 + t) * 0.5 + 0.5) * gridSize * 0.8;
+
+      const ex = x + Math.cos(angle) * magnitude;
+      const ey = y + Math.sin(angle) * magnitude;
+
+      const dist = Math.sqrt((x - mouse.x) ** 2 + (y - mouse.y) ** 2);
+      const proximity = Math.max(0, 1 - dist / 300);
+
+      const hue = (n * 180 + t * 20 + proximity * 60) % 360;
+      const lightness = 40 + proximity * 30;
+      const alpha = 0.3 + proximity * 0.5 + Math.sin(t * 2 + i + j) * 0.1;
+
+      // Probability cloud
+      if (proximity > 0.1) {
+        ctx.fillStyle = `hsla(${hue}, 70%, ${lightness}%, ${proximity * 0.15})`;
+        ctx.beginPath();
+        ctx.arc(x, y, proximity * 40, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Field vector
+      ctx.strokeStyle = `hsla(${hue}, 80%, ${lightness}%, ${alpha})`;
+      ctx.lineWidth = 1 + proximity;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      // Endpoint dot
+      ctx.fillStyle = `hsla(${hue}, 90%, 70%, ${alpha * 1.5})`;
+      ctx.beginPath();
+      ctx.arc(ex, ey, 1.5 + proximity * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Uncertainty halos
+  for (let i = 0; i < 5; i++) {
+    const angle = t * 0.5 + i * Math.PI * 2 / 5;
+    const radius = 100 + Math.sin(t + i) * 50;
+    const hx = mouse.x + Math.cos(angle) * radius;
+    const hy = mouse.y + Math.sin(angle) * radius;
+    const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, 60);
+    g.addColorStop(0, `hsla(${(t * 50 + i * 72) % 360}, 80%, 60%, 0.15)`);
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(hx, hy, 60, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ═══════════════════════════════════════
+//  MODE 3: DNA HELIX
+// ═══════════════════════════════════════
+function drawDNAHelix(dt) {
+  const t = time;
+  const mx = (mouse.x - cx) / cx;
+  const helixCount = 3;
+
+  for (let h = 0; h < helixCount; h++) {
+    const offsetX = (h - 1) * W * 0.3;
+    const baseX = cx + offsetX;
+
+    for (let i = 0; i < 80; i++) {
+      const yPos = (i / 80) * H * 1.2 - H * 0.1;
+      const phase1 = i * 0.15 + t * 2 + h * Math.PI * 0.66;
+      const phase2 = phase1 + Math.PI;
+
+      const amplitude = 60 + Math.sin(i * 0.05 + t) * 20 + mx * 30;
+      const x1 = baseX + Math.cos(phase1) * amplitude;
+      const x2 = baseX + Math.cos(phase2) * amplitude;
+      const z1 = Math.sin(phase1);
+      const z2 = Math.sin(phase2);
+
+      const dist1 = Math.sqrt((x1 - mouse.x) ** 2 + (yPos - mouse.y) ** 2);
+      const dist2 = Math.sqrt((x2 - mouse.x) ** 2 + (yPos - mouse.y) ** 2);
+      const glow1 = Math.max(0, 1 - dist1 / 200);
+      const glow2 = Math.max(0, 1 - dist2 / 200);
+
+      // Base pair connection
+      if (i % 3 === 0) {
+        const hue = (i * 4 + t * 20) % 360;
+        ctx.strokeStyle = `hsla(${hue}, 60%, 50%, ${0.2 + (glow1 + glow2) * 0.3})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x1, yPos);
+        ctx.lineTo(x2, yPos);
+        ctx.stroke();
+
+        // Base pair letters
+        const midX = (x1 + x2) / 2;
+        const pairs = ['A-T', 'G-C', 'T-A', 'C-G'];
+        const pair = pairs[i % 4];
+        ctx.fillStyle = `hsla(${hue}, 80%, 70%, ${0.15 + (glow1 + glow2) * 0.3})`;
+        ctx.font = '8px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText(pair, midX, yPos + 3);
+      }
+
+      // Strand 1
+      const size1 = (3 + z1 * 2) * (1 + glow1 * 0.5);
+      const alpha1 = (0.5 + z1 * 0.3) * (0.7 + glow1 * 0.3);
+      ctx.fillStyle = `hsla(${200 + h * 40}, 80%, ${55 + z1 * 20}%, ${alpha1})`;
+      ctx.beginPath();
+      ctx.arc(x1, yPos, size1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Strand 2
+      const size2 = (3 + z2 * 2) * (1 + glow2 * 0.5);
+      const alpha2 = (0.5 + z2 * 0.3) * (0.7 + glow2 * 0.3);
+      ctx.fillStyle = `hsla(${320 + h * 40}, 80%, ${55 + z2 * 20}%, ${alpha2})`;
+      ctx.beginPath();
+      ctx.arc(x2, yPos, size2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glow effects
+      if (glow1 > 0.3) {
+        const g = ctx.createRadialGradient(x1, yPos, 0, x1, yPos, 30);
+        g.addColorStop(0, `hsla(200, 80%, 70%, ${glow1 * 0.2})`);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x1, yPos, 30, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+//  MODE 4: CONSCIOUSNESS — Mandala + Waves
+// ═══════════════════════════════════════
+function drawConsciousness(dt) {
+  const t = time;
+  const mx = mouse.x, my = mouse.y;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Rotating mandala layers
+  for (let layer = 0; layer < 6; layer++) {
+    const layerRadius = 50 + layer * 50 + Math.sin(t + layer) * 20;
+    const segments = 12 + layer * 6;
+    const rotation = t * (0.2 + layer * 0.05) * (layer % 2 === 0 ? 1 : -1);
+
+    ctx.save();
+    ctx.rotate(rotation);
+
+    for (let i = 0; i < segments; i++) {
+      const angle = (Math.PI * 2 * i) / segments;
+      const nextAngle = (Math.PI * 2 * (i + 1)) / segments;
+
+      const r1 = layerRadius + Math.sin(t * 2 + i + layer) * 15;
+      const r2 = layerRadius + Math.sin(t * 2 + i + 1 + layer) * 15;
+
+      const hue = (i * (360 / segments) + t * 30 + layer * 30) % 360;
+      const mouseInfluence = Math.sin(
+        Math.atan2(my - cy, mx - cx) * segments / 2 + t
+      ) * 0.3 + 0.7;
+
+      ctx.strokeStyle = `hsla(${hue}, 70%, 60%, ${0.15 * mouseInfluence + 0.1})`;
+      ctx.lineWidth = 1 + layer * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle) * r1, Math.sin(angle) * r1);
+
+      // Bezier curves for organic shapes
+      const cpR = (r1 + r2) / 2 + Math.sin(t * 3 + i) * 20;
+      const cpAngle = (angle + nextAngle) / 2;
+      ctx.quadraticCurveTo(
+        Math.cos(cpAngle) * cpR * 1.2,
+        Math.sin(cpAngle) * cpR * 1.2,
+        Math.cos(nextAngle) * r2,
+        Math.sin(nextAngle) * r2
+      );
+      ctx.stroke();
+
+      // Petal fills
+      if (layer % 2 === 0) {
+        ctx.fillStyle = `hsla(${hue}, 60%, 50%, ${0.03 * mouseInfluence})`;
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  // Central eye
+  const eyeRadius = 30 + Math.sin(t * 1.5) * 5;
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, eyeRadius * 3);
+  g.addColorStop(0, 'rgba(255,255,255,0.8)');
+  g.addColorStop(0.2, 'rgba(180,200,255,0.4)');
+  g.addColorStop(0.5, 'rgba(100,150,255,0.1)');
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, 0, eyeRadius * 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Iris
+  const irisOffsetX = (mx - cx) / cx * 5;
+  const irisOffsetY = (my - cy) / cy * 5;
+  const ig = ctx.createRadialGradient(irisOffsetX, irisOffsetY, 0, irisOffsetX, irisOffsetY, eyeRadius);
+  ig.addColorStop(0, `hsla(${t * 40 % 360}, 80%, 20%, 0.9)`);
+  ig.addColorStop(0.5, `hsla(${(t * 40 + 60) % 360}, 70%, 40%, 0.6)`);
+  ig.addColorStop(1, `hsla(${(t * 40 + 120) % 360}, 60%, 60%, 0.1)`);
+  ctx.fillStyle = ig;
+  ctx.beginPath();
+  ctx.arc(irisOffsetX, irisOffsetY, eyeRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pupil
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.beginPath();
+  ctx.arc(irisOffsetX, irisOffsetY, eyeRadius * 0.35 + Math.sin(t * 2) * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+
+  // Brainwave pattern at bottom
+  ctx.strokeStyle = 'rgba(100,180,255,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let x = 0; x < W; x += 2) {
+    const wave = Math.sin(x * 0.02 + t * 3) * 20
+               + Math.sin(x * 0.05 + t * 5) * 10
+               + Math.sin(x * 0.01 + t) * 30;
+    const y = H * 0.85 + wave;
+    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+// ═══════════════════════════════════════
+//  MAIN RENDER LOOP
+// ═══════════════════════════════════════
+let lastTime = performance.now();
+let frameCount = 0;
+let fpsTime = 0;
+
+const drawFns = [drawNebula, drawNeuralNetwork, drawQuantumField, drawDNAHelix, drawConsciousness];
+
+function render(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  time += dt;
+
+  // FPS counter
+  frameCount++;
+  fpsTime += dt;
+  if (fpsTime >= 1) {
+    fpsEl.textContent = `${Math.round(frameCount / fpsTime)} FPS`;
+    frameCount = 0; fpsTime = 0;
+  }
+
+  // Transition
+  if (transitionProgress < 1) {
+    transitionProgress = Math.min(1, transitionProgress + dt * 1.5);
+    if (transitionProgress >= 1) mode = targetMode;
+  }
+
+  // Clear with fade
+  ctx.fillStyle = `rgba(0, 0, 0, ${mode === 0 ? 1 : 0.15})`;
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw current mode
+  if (transitionProgress < 1) {
+    ctx.globalAlpha = 1 - transitionProgress;
+    drawFns[mode](dt);
+    ctx.globalAlpha = transitionProgress;
+    drawFns[targetMode](dt);
+    ctx.globalAlpha = 1;
+  } else {
+    drawFns[mode](dt);
+  }
+
+  // Draw particles (always)
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.update(dt);
+    if (!p.alive) { particles.splice(i, 1); continue; }
+
+    // Trail
+    if (p.trail.length > 1) {
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.size * 0.5;
+      ctx.globalAlpha = p.alpha * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(p.trail[0].x, p.trail[0].y);
+      for (const pt of p.trail) ctx.lineTo(pt.x, pt.y);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Mouse attractor glow
+  if (mouse.pressed) {
+    const g = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 100);
+    g.addColorStop(0, `hsla(${time * 60 % 360}, 80%, 70%, 0.2)`);
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 100, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  requestAnimationFrame(render);
+}
+
+requestAnimationFrame(render);
+
+// Auto-cycle modes every 15 seconds if no interaction
+let lastInteraction = 0;
+window.addEventListener('mousemove', () => lastInteraction = time);
+window.addEventListener('keydown', () => lastInteraction = time);
+window.addEventListener('touchstart', () => lastInteraction = time);
+setInterval(() => {
+  if (time - lastInteraction > 15) {
+    targetMode = (targetMode + 1) % 5;
+    transitionProgress = 0;
+    modeEl.textContent = `DIMENSION: ${modeNames[targetMode]}`;
+    updateMobileDots();
+  }
+}, 15000);
+</script>
+</body>
+</html>
