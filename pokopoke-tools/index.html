@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ぽこポケ攻略ツールズ | ぽこ あ ポケモン 総合攻略</title>
+  <meta name="description" content="ぽこ あ ポケモン（Switch 2）の総合攻略ツール。加工タイマー、素材計算、ポケモン特技検索、自動化ライン設計、おねがいごとチェッカーなど7つのツールを搭載。">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header class="header">
+    <h1>ぽこポケ攻略ツールズ</h1>
+    <p>ぽこ あ ポケモン 総合攻略ツール for Nintendo Switch 2</p>
+  </header>
+
+  <!-- タブナビゲーション -->
+  <nav class="tab-nav" id="tabNav">
+    <button class="tab-btn active" data-tab="timer"><span class="tab-icon">&#x23F1;</span>加工タイマー</button>
+    <button class="tab-btn" data-tab="calculator"><span class="tab-icon">&#x1F9EE;</span>素材計算</button>
+    <button class="tab-btn" data-tab="skill-search"><span class="tab-icon">&#x1F50D;</span>特技検索</button>
+    <button class="tab-btn" data-tab="automation"><span class="tab-icon">&#x2699;</span>自動化ライン</button>
+    <button class="tab-btn" data-tab="quests"><span class="tab-icon">&#x2705;</span>おねがいごと</button>
+    <button class="tab-btn" data-tab="challenge"><span class="tab-icon">&#x1F3C5;</span>入団チャレンジ</button>
+    <button class="tab-btn" data-tab="time-calc"><span class="tab-icon">&#x1F552;</span>時間計算機</button>
+  </nav>
+
+  <!-- メインコンテンツ -->
+  <main class="main">
+
+    <!-- 1. 加工タイマー -->
+    <section class="tab-content active" id="tab-timer">
+      <div class="card">
+        <h2>加工タイマー</h2>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:14px;">
+          素材の加工開始時にタイマーをセット。完了時にブラウザ通知でお知らせします。
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>加工する素材</label>
+            <select id="timerMaterial">
+              <option value="ざいもく">ざいもく（約5分）</option>
+              <option value="レンガ">レンガ（約5分）</option>
+              <option value="かみ">かみ（約5分）</option>
+              <option value="てつ">てつ（約5分）</option>
+              <option value="てつののべぼう">てつののべぼう（約5分）</option>
+              <option value="ガラス">ガラス（約5分）</option>
+              <option value="コンクリート">コンクリート（約5分）</option>
+              <option value="ポケメタル">ポケメタル（約5分）</option>
+              <option value="デカヌギア">デカヌギア（約10分）</option>
+              <option value="えのぐ">えのぐ（約3分）</option>
+              <option value="カスタム">カスタム時間...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>カスタム時間（分）</label>
+            <input type="number" id="timerCustomMin" min="1" max="60" value="5" placeholder="分">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>メモ（任意）</label>
+          <input type="text" id="timerMemo" placeholder="例: ストライクに頼んだ分">
+        </div>
+        <button class="btn btn-primary btn-block" id="timerStartBtn">タイマー開始</button>
+      </div>
+
+      <div class="card">
+        <h2>稼働中のタイマー</h2>
+        <div id="timerList">
+          <div class="empty-state">
+            <div class="empty-icon">&#x23F1;</div>
+            <p>タイマーはまだありません</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 素材計算ツール -->
+    <section class="tab-content" id="tab-calculator">
+      <div class="card">
+        <h2>素材計算ツール</h2>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:14px;">
+          欲しい素材と個数を入力すると、必要な原材料を逆算して表示します。
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>欲しい素材</label>
+            <select id="calcMaterial">
+              <option value="">選択してください</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>欲しい個数</label>
+            <input type="number" id="calcAmount" min="1" value="10" placeholder="個数">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" id="calcBtn">計算する</button>
+        <div id="calcResult"></div>
+      </div>
+
+      <div class="card">
+        <h2>加工チェーン一覧</h2>
+        <div id="chainList"></div>
+      </div>
+    </section>
+
+    <!-- 3. 特技検索 -->
+    <section class="tab-content" id="tab-skill-search">
+      <div class="card">
+        <h2>ポケモン特技検索</h2>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:14px;">
+          特技名やポケモン名で検索。どのポケモンが何をできるか即座にわかります。
+        </p>
+        <div class="search-box">
+          <input type="text" id="skillSearchInput" placeholder="特技名またはポケモン名を入力...">
+        </div>
+        <div class="form-group">
+          <label>特技で絞り込み</label>
+          <select id="skillFilter">
+            <option value="">すべて表示</option>
+          </select>
+        </div>
+        <div id="skillResults"></div>
+      </div>
+    </section>
+
+    <!-- 4. 自動化ライン設計 -->
+    <section class="tab-content" id="tab-automation">
+      <div class="card">
+        <h2>自動化ライン設計ツール</h2>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:14px;">
+          素材の自動収集・加工コンボを提案。効率的な街づくりのお供に。
+        </p>
+        <div id="automationList"></div>
+      </div>
+    </section>
+
+    <!-- 5. おねがいごとチェッカー -->
+    <section class="tab-content" id="tab-quests">
+      <div class="card">
+        <h2>おねがいごとチェッカー</h2>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:14px;">
+          ストーリーの進捗を管理。完了したおねがいごとにチェックを入れて進捗を追跡できます。
+        </p>
+        <div class="progress-bar"><div class="progress-fill" id="questProgressFill" style="width:0%"></div></div>
+        <p class="progress-text" id="questProgressText">0 / 0 完了</p>
+        <div id="questList"></div>
+      </div>
+
+      <div class="card">
+        <h2>メタモンのわざ一覧</h2>
+        <div class="table-wrapper">
+          <table id="moveTable">
+            <thead><tr><th>わざ</th><th>覚えるポケモン</th><th>効果</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. 入団チャレンジ -->
+    <section class="tab-content" id="tab-challenge">
+      <div class="card">
+        <h2>入団チャレンジ進捗管理</h2>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:14px;">
+          入団チャレンジの各ステージの進捗を管理。必要な素材と攻略のコツを表示。
+        </p>
+        <div class="progress-bar"><div class="progress-fill" id="challengeProgressFill" style="width:0%"></div></div>
+        <p class="progress-text" id="challengeProgressText">0 / 9 完了</p>
+        <div id="challengeList"></div>
+      </div>
+    </section>
+
+    <!-- 7. 時間操作計算機 -->
+    <section class="tab-content" id="tab-time-calc">
+      <div class="card">
+        <h2>時間操作計算機</h2>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:14px;">
+          欲しい素材の量から、必要な加工回数・待ち時間・時間操作量を計算します。
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>目標の素材</label>
+            <select id="timeCalcMaterial">
+              <option value="">選択してください</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>欲しい個数</label>
+            <input type="number" id="timeCalcAmount" min="1" value="50" placeholder="個数">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" id="timeCalcBtn">計算する</button>
+        <div id="timeCalcResult"></div>
+      </div>
+
+      <div class="card">
+        <h2>時間操作の基本情報</h2>
+        <div style="font-size:0.9rem;color:var(--text-secondary);">
+          <p><strong style="color:var(--warning);">AM 5:00</strong> に日付が更新されます。日がわり・スタンプカード等もこのタイミング。</p>
+          <br>
+          <p><strong style="color:var(--info);">時間操作の方法:</strong></p>
+          <ol style="padding-left:20px;margin-top:4px;">
+            <li>Switch 2の設定 → 日付と時刻</li>
+            <li>「インターネットで時間をあわせる」をオフ</li>
+            <li>手動で日付・時刻を変更</li>
+          </ol>
+          <br>
+          <p style="color:var(--accent-light);">※ 建築時間や加工時間は時間操作で短縮可能。作物もさいばいポケモン＋時間操作で即収穫。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター -->
+  <footer class="footer">
+    <p>ぽこポケ攻略ツールズ &copy; 2026</p>
+    <p>データ出典: <a href="https://game8.jp/pocoapokemon" target="_blank">ゲームエイト</a> / <a href="https://gamepedia.jp/pocoapokemon" target="_blank">攻略大百科</a> / <a href="https://game-tier.com/pokopoke/" target="_blank">ゲーム攻略ティア</a> / <a href="https://hyperts.net/pokopoke/memo/" target="_blank">hyperT's</a></p>
+    <p style="margin-top:4px;">当サイトは非公式ファンサイトです。ポケモン・ぽこあポケモンは株式会社ポケモンの商標です。</p>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,505 @@
+/* ぽこポケ攻略ツール - スタイルシート */
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-card: #0f3460;
+  --bg-card-hover: #1a4a7a;
+  --accent: #e94560;
+  --accent-light: #ff6b81;
+  --text-primary: #eee;
+  --text-secondary: #aab;
+  --text-muted: #778;
+  --success: #2ed573;
+  --warning: #ffa502;
+  --info: #70a1ff;
+  --border: #2a2a4a;
+  --tag-fire: #ff6348;
+  --tag-water: #3498db;
+  --tag-grass: #2ecc71;
+  --tag-electric: #f1c40f;
+  --tag-normal: #95a5a6;
+  --tag-rock: #8B7355;
+  --tag-poison: #9b59b6;
+  --radius: 12px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ヘッダー */
+.header {
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+  padding: 20px 24px;
+  text-align: center;
+  border-bottom: 2px solid var(--accent);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 {
+  font-size: 1.6rem;
+  letter-spacing: 2px;
+  background: linear-gradient(90deg, var(--accent-light), var(--warning), var(--info));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+/* タブナビゲーション */
+.tab-nav {
+  display: flex;
+  overflow-x: auto;
+  background: var(--bg-secondary);
+  padding: 8px 12px;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tab-btn:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+.tab-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  font-weight: bold;
+}
+.tab-btn .tab-icon { margin-right: 4px; }
+
+/* メインコンテンツ */
+.main { padding: 16px; max-width: 900px; margin: 0 auto; }
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* カード */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.card h2 {
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+  color: var(--accent-light);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.card h3 {
+  font-size: 1rem;
+  margin: 12px 0 8px;
+  color: var(--info);
+}
+
+/* フォーム */
+select, input[type="text"], input[type="number"] {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border 0.2s;
+}
+select:focus, input:focus {
+  border-color: var(--accent);
+}
+label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.form-group {
+  margin-bottom: 14px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ボタン */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--accent-light);
+  transform: translateY(-1px);
+}
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  background: var(--bg-card-hover);
+}
+.btn-success {
+  background: var(--success);
+  color: #1a1a2e;
+}
+.btn-warning {
+  background: var(--warning);
+  color: #1a1a2e;
+}
+.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+.btn-block { width: 100%; justify-content: center; }
+
+/* タグ */
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin: 2px;
+}
+.tag-skill { background: var(--info); color: #1a1a2e; }
+.tag-pokemon { background: var(--accent); color: white; }
+.tag-fire { background: var(--tag-fire); color: white; }
+.tag-water { background: var(--tag-water); color: white; }
+.tag-grass { background: var(--tag-grass); color: #1a1a2e; }
+.tag-electric { background: var(--tag-electric); color: #1a1a2e; }
+
+/* リスト */
+.pokemon-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.pokemon-chip {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  cursor: default;
+  transition: all 0.2s;
+}
+.pokemon-chip:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+}
+
+/* 検索ボックス */
+.search-box {
+  position: relative;
+  margin-bottom: 16px;
+}
+.search-box input {
+  padding-left: 36px;
+}
+.search-box::before {
+  content: '\1F50D';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+}
+
+/* テーブル */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+th {
+  background: var(--bg-secondary);
+  color: var(--info);
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+}
+tr:hover {
+  background: rgba(233, 69, 96, 0.1);
+}
+
+/* タイマーカード */
+.timer-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.timer-card .timer-info { flex: 1; }
+.timer-card .timer-name {
+  font-weight: bold;
+  color: var(--accent-light);
+  font-size: 1rem;
+}
+.timer-card .timer-time {
+  font-size: 1.8rem;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  color: var(--success);
+}
+.timer-card .timer-time.expired {
+  color: var(--accent);
+  animation: pulse 1s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.timer-card .timer-end {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* チェックリスト */
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+.checklist-item:hover {
+  background: rgba(255,255,255,0.03);
+}
+.checklist-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.checklist-item.completed .checklist-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+.checklist-text { flex: 1; }
+.checklist-reward {
+  color: var(--success);
+  font-size: 0.8rem;
+}
+
+/* フロー図 */
+.flow-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.flow-node {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  min-width: 100px;
+  text-align: center;
+}
+.flow-node.highlight {
+  border-color: var(--accent);
+  background: rgba(233, 69, 96, 0.15);
+}
+.flow-arrow {
+  color: var(--accent);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.flow-skill {
+  color: var(--info);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+/* コンボカード */
+.combo-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.combo-card h4 {
+  color: var(--warning);
+  margin-bottom: 8px;
+}
+.combo-desc {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+.combo-roles { margin-bottom: 8px; }
+.combo-role {
+  display: flex;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.85rem;
+}
+.combo-role-name {
+  color: var(--info);
+  font-weight: bold;
+  min-width: 80px;
+}
+.combo-tips {
+  background: rgba(255, 165, 2, 0.1);
+  border-left: 3px solid var(--warning);
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  border-radius: 0 8px 8px 0;
+}
+
+/* 計算結果 */
+.calc-result {
+  background: rgba(46, 213, 115, 0.1);
+  border: 1px solid var(--success);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 12px;
+}
+.calc-result h4 {
+  color: var(--success);
+  margin-bottom: 8px;
+}
+.calc-line {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.9rem;
+}
+.calc-line .label { color: var(--text-secondary); }
+.calc-line .value { font-weight: bold; color: var(--text-primary); }
+
+/* エリアセクション */
+.area-section {
+  margin-bottom: 16px;
+}
+.area-header {
+  background: linear-gradient(90deg, var(--bg-card), transparent);
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.area-header:hover { background: var(--bg-card-hover); }
+.area-header h3 { color: var(--warning); margin: 0; }
+.area-toggle { transition: transform 0.2s; }
+.area-toggle.open { transform: rotate(90deg); }
+
+/* プログレスバー */
+.progress-bar {
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.progress-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* 空状態 */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+.empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+/* フッター */
+.footer {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+.footer a { color: var(--info); text-decoration: none; }
+
+/* レスポンシブ */
+@media (max-width: 600px) {
+  .header h1 { font-size: 1.2rem; }
+  .main { padding: 10px; }
+  .card { padding: 14px; }
+  .form-row { grid-template-columns: 1fr; }
+  .timer-card { flex-direction: column; text-align: center; }
+  .timer-card .timer-time { font-size: 1.4rem; }
+  .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
+}
