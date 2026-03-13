@@ -334,9 +334,10 @@ let tileEls = []; // active tile DOM elements
 // ===== BOARD GEOMETRY =====
 function getBoardMetrics() {
   const rect = boardEl.getBoundingClientRect();
-  const pad = rect.width * 0.024;
-  const gap = rect.width * 0.024;
-  const cellSize = (rect.width - pad * 2 - gap * 3) / 4;
+  const w = rect.width || boardEl.offsetWidth || 340;
+  const pad = w * 0.024;
+  const gap = w * 0.024;
+  const cellSize = (w - pad * 2 - gap * 3) / 4;
   return { rect, pad, gap, cellSize };
 }
 
@@ -681,7 +682,12 @@ document.getElementById('new-game').addEventListener('click', () => { window._wo
 document.getElementById('undo-btn').addEventListener('click', undo);
 
 // ===== INIT =====
-newGame();
+// Wait for layout to complete before rendering tiles
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    newGame();
+  });
+});
 
 // Recalc tile positions on resize
 window.addEventListener('resize', () => {
