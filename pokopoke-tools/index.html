@@ -48,6 +48,7 @@
     <button class="tab-btn" data-tab="challenge"><span class="tab-icon">&#x1F3C5;</span>入団チャレンジ</button>
     <button class="tab-btn" data-tab="time-calc"><span class="tab-icon">&#x1F552;</span>時間計算機</button>
     <button class="tab-btn" data-tab="habitats"><span class="tab-icon">&#x1F30F;</span>せいそくち</button>
+    <button class="tab-btn" data-tab="recognize"><span class="tab-icon">&#x1F4F7;</span>ポケモン認識</button>
   </nav>
 
   <!-- メインコンテンツ -->
@@ -274,6 +275,49 @@
 
       <!-- ポケモンカード一覧 -->
       <div class="habitat-grid" id="habitatGrid"></div>
+    </section>
+
+    <!-- 9. ポケモン認識 -->
+    <section class="tab-content" id="tab-recognize">
+
+      <!-- シルエットクイズ -->
+      <div class="card">
+        <h2>シルエットクイズ</h2>
+        <p style="color:var(--text-sub);font-size:0.85rem;margin-bottom:14px;">
+          シルエットから ぽこあポケモン に登場するポケモンを当てよう！
+        </p>
+        <div class="silhouette-wrap">
+          <img id="quizSprite" src="" alt="シルエット" class="silhouette-img">
+        </div>
+        <div class="form-row" style="align-items:flex-end;">
+          <div class="form-group">
+            <label>ポケモン名（ひらがな/カタカナ）</label>
+            <input type="text" id="quizInput" placeholder="例: ピカチュウ" autocomplete="off">
+          </div>
+          <button class="btn btn-primary" id="quizCheckBtn">答え合わせ</button>
+        </div>
+        <div id="quizResult"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-secondary" id="quizRevealBtn">答えを見る</button>
+          <button class="btn btn-primary" id="quizNextBtn">次のポケモン →</button>
+        </div>
+      </div>
+
+      <!-- 画像から判定 -->
+      <div class="card">
+        <h2>画像から判定</h2>
+        <p style="color:var(--text-sub);font-size:0.85rem;margin-bottom:14px;">
+          ゲームのスクリーンショットをアップロードすると、色から関連するポケモンを候補表示します。
+        </p>
+        <div class="recognize-drop-area" id="recognizeDropArea">
+          <div class="drop-icon">&#x1F4F7;</div>
+          <p>画像をドロップ、またはタップして選択</p>
+          <input type="file" id="recognizeFileInput" accept="image/*" style="display:none;">
+        </div>
+        <div id="recognizePreview"></div>
+        <div id="recognizeResult"></div>
+      </div>
+
     </section>
 
   </main>

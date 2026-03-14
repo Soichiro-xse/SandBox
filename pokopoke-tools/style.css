@@ -901,3 +901,69 @@ tr:hover td { background: rgba(59,76,202,0.05); }
   .header-sprites { display: none; }
   .sprite-banner { display: none; }
 }
+
+/* ============================
+   9. ポケモン認識
+   ============================ */
+
+/* シルエットクイズ */
+.silhouette-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 20px;
+  background: var(--bg-panel);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.silhouette-img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  transition: filter 0.5s ease;
+}
+
+.quiz-result {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  border-left: 3px solid transparent;
+}
+.quiz-result.correct { background: rgba(61,189,58,0.12); border-color: var(--poke-green); color: var(--poke-green); }
+.quiz-result.wrong   { background: rgba(227,53,13,0.10); border-color: var(--poke-red);   color: var(--poke-red); }
+.quiz-result.reveal  { background: rgba(59,76,202,0.10); border-color: var(--poke-blue);  color: var(--poke-blue); }
+.quiz-result strong  { color: var(--text); }
+
+/* 画像ドロップエリア */
+.recognize-drop-area {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 32px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 12px;
+  user-select: none;
+}
+.recognize-drop-area:hover,
+.recognize-drop-area.drag-over {
+  border-color: var(--poke-blue);
+  background: rgba(59,76,202,0.06);
+}
+.drop-icon { font-size: 2rem; margin-bottom: 8px; }
+.recognize-drop-area p { color: var(--text-sub); font-size: 0.9rem; }
+
+#recognizePreview {
+  text-align: center;
+  margin-bottom: 12px;
+}
+#recognizePreview img {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: var(--shadow-sm);
+}
