@@ -582,12 +582,26 @@ body {
 .pokemon-card[data-type="フェアリー"] { background: linear-gradient(135deg, #fdf2f8, #fce7f3); border-color: #fbcfe8; }
 .pokemon-card[data-type="ノーマル"] { background: linear-gradient(135deg, #fafaf9, #f5f5f4); border-color: #d6d3d1; }
 
-[data-theme="dark"] .pokemon-card[data-type="ほのお"] { background: linear-gradient(135deg, #2a1010, #1e0808); border-color: #7f1d1d; }
-[data-theme="dark"] .pokemon-card[data-type="みず"] { background: linear-gradient(135deg, #0a1628, #081020); border-color: #1e3a5f; }
-[data-theme="dark"] .pokemon-card[data-type="くさ"] { background: linear-gradient(135deg, #0a2010, #081a0c); border-color: #14532d; }
-[data-theme="dark"] .pokemon-card[data-type="でんき"] { background: linear-gradient(135deg, #1a1800, #161400); border-color: #713f12; }
-[data-theme="dark"] .pokemon-card[data-type="こおり"] { background: linear-gradient(135deg, #0a1a20, #081418); border-color: #155e75; }
-[data-theme="dark"] .pokemon-card[data-type] { border-color: var(--border); }
+/* Dark mode: subtle tinted backgrounds that keep text readable */
+[data-theme="dark"] .pokemon-card[data-type] { background: var(--pokemon-card-bg); border-color: var(--border); }
+[data-theme="dark"] .pokemon-card[data-type="ほのお"] { border-left: 3px solid #ef4444; }
+[data-theme="dark"] .pokemon-card[data-type="みず"] { border-left: 3px solid #3b82f6; }
+[data-theme="dark"] .pokemon-card[data-type="くさ"] { border-left: 3px solid #22c55e; }
+[data-theme="dark"] .pokemon-card[data-type="でんき"] { border-left: 3px solid #eab308; }
+[data-theme="dark"] .pokemon-card[data-type="こおり"] { border-left: 3px solid #06b6d4; }
+[data-theme="dark"] .pokemon-card[data-type="かくとう"] { border-left: 3px solid #f87171; }
+[data-theme="dark"] .pokemon-card[data-type="どく"] { border-left: 3px solid #a855f7; }
+[data-theme="dark"] .pokemon-card[data-type="じめん"] { border-left: 3px solid #d97706; }
+[data-theme="dark"] .pokemon-card[data-type="ひこう"] { border-left: 3px solid #818cf8; }
+[data-theme="dark"] .pokemon-card[data-type="エスパー"] { border-left: 3px solid #ec4899; }
+[data-theme="dark"] .pokemon-card[data-type="むし"] { border-left: 3px solid #84cc16; }
+[data-theme="dark"] .pokemon-card[data-type="いわ"] { border-left: 3px solid #a8a29e; }
+[data-theme="dark"] .pokemon-card[data-type="ゴースト"] { border-left: 3px solid #8b5cf6; }
+[data-theme="dark"] .pokemon-card[data-type="ドラゴン"] { border-left: 3px solid #6366f1; }
+[data-theme="dark"] .pokemon-card[data-type="あく"] { border-left: 3px solid #78716c; }
+[data-theme="dark"] .pokemon-card[data-type="はがね"] { border-left: 3px solid #94a3b8; }
+[data-theme="dark"] .pokemon-card[data-type="フェアリー"] { border-left: 3px solid #f472b6; }
+[data-theme="dark"] .pokemon-card[data-type="ノーマル"] { border-left: 3px solid #a8a29e; }
 
 /* ======= Pokemon List View ======= */
 .pokemon-list-count {
