@@ -76,10 +76,12 @@ function PokemonCard({ pokemon, onClick }) {
   const imgUrl = getPokemonImageUrl(pokemon.name);
   const types = getPokemonTypes(pokemon.name);
   const isRare = pokemon.condition === '珍しい';
+  const primaryType = types[0] || '';
 
   return (
     <div
       className={`pokemon-card ${isRare ? 'rare' : ''}`}
+      data-type={primaryType}
       onClick={() => onClick && onClick(pokemon.name)}
     >
       {isRare && <div className="rare-sparkle" />}
@@ -300,7 +302,7 @@ function PokemonListView({ searchQuery, onPokemonClick }) {
       </div>
       {filtered.length === 0 && (
         <div className="no-results">
-          <div className="no-results-icon">🔍</div>
+          <img src={getPokemonImageUrl('コダック')} alt="" style={{ width: 64, height: 64, imageRendering: 'pixelated', opacity: 0.5 }} />
           <p>ポケモンが見つかりません</p>
         </div>
       )}
@@ -377,20 +379,20 @@ function getAllItems() {
 }
 
 const ITEM_CATEGORIES = [
-  { id: 'plant', name: '草・花', icon: '🌿', keywords: ['くさ', 'はな', 'コケ', 'いけがき', '野菜畑', 'うきくさ', 'うきしま'] },
-  { id: 'tree', name: '木・自然', icon: '🌳', keywords: ['木', 'きりかぶ', 'きのみの木', 'ヤシ'] },
-  { id: 'furniture', name: '家具', icon: '🪑', keywords: ['イス', 'テーブル', 'つくえ', 'デスク', 'ベッド', 'ソファ', 'クッション', 'たな', 'ドレッサー', 'クローゼット', 'ロッカー', 'チェスト', 'チェア', 'ハンモック', 'こしかけ', 'だい('] },
+  { id: 'plant', name: '草・花', icon: '🌿', keywords: ['くさ', 'はな', 'コケ', 'いけがき', '野菜畑', 'うきくさ', 'うきしま', '草('] },
+  { id: 'tree', name: '木・自然', icon: '🌳', keywords: ['木', 'きりかぶ', 'きのみの木', 'ヤシ', '高いところ'] },
+  { id: 'furniture', name: '家具', icon: '🪑', keywords: ['イス', 'テーブル', 'つくえ', 'デスク', 'ベッド', 'ソファ', 'クッション', 'たな', 'ドレッサー', 'クローゼット', 'ロッカー', 'チェスト', 'チェア', 'ハンモック', 'こしかけ', 'だい(', 'ほんだな', 'ざっし', 'ゴミばこ', 'ゴミ入れ', 'ついたて', 'しきり', 'カウンターのだい', 'きゃたつ', 'バスケット'] },
   { id: 'lighting', name: '照明', icon: '💡', keywords: ['ライト', 'ランプ', 'ランタン', 'でんちゅう', 'キャンドル', 'スポットライト', 'がいとう', '明かり'] },
-  { id: 'water', name: '水・温泉', icon: '💧', keywords: ['みず', 'うみのみず', 'おんせん', 'たき', 'ゆぐち', 'どろみず', 'シャワー', 'バスタブ', 'せんめんだい', 'シンク', 'みずおけ'] },
+  { id: 'water', name: '水・温泉', icon: '💧', keywords: ['みず', 'うみのみず', 'おんせん', 'たき', 'ゆぐち', 'どろみず', 'シャワー', 'バスタブ', 'せんめんだい', 'シンク', 'みずおけ', '水力はつでん'] },
   { id: 'rock', name: '岩・石', icon: '🪨', keywords: ['いわ', 'いし', 'ふみいし', 'どのう', 'マグマ'] },
   { id: 'fire', name: '火・熱', icon: '🔥', keywords: ['たきび', 'かがりび', 'たいまつ', 'だんろ', 'ようこうろ', 'キャンプファイヤー', '火力はつでん'] },
-  { id: 'food', name: '食べ物・飲み物', icon: '🍽️', keywords: ['皿にのせた', 'ピザ', 'サンドイッチ', 'おべんとう', 'クッキー', 'ケーキ', 'かきごおり', 'フライドポテト', 'クリームソーダ', 'パーティーカップ', 'パーティープレート', 'マグカップ', 'きのみいり', 'しょっき', 'フードカウンター', 'キッチン', 'コンロ', 'フライパン', 'まないた', 'なべ', 'でんしレンジ', 'パンがま', 'レジ'] },
+  { id: 'food', name: '食べ物・飲み物', icon: '🍽️', keywords: ['皿にのせた', 'ピザ', 'サンドイッチ', 'おべんとう', 'クッキー', 'ケーキ', 'かきごおり', 'フライドポテト', 'クリームソーダ', 'パーティーカップ', 'パーティープレート', 'マグカップ', 'きのみいり', 'しょっき', 'フードカウンター', 'キッチン', 'コンロ', 'フライパン', 'まないた', 'なべ', 'でんしレンジ', 'パンがま', 'レジ', 'アフタヌーンティー'] },
   { id: 'music', name: '音楽・ステージ', icon: '🎵', keywords: ['スピーカー', 'マイク', 'ギター', 'ベース', 'おおだいこ', 'CDプレーヤー', 'CDラック', 'おんぷ', 'ステージ'] },
-  { id: 'gaming', name: 'ゲーム・おもちゃ', icon: '🎮', keywords: ['ゲーミング', 'アーケード', 'にんぎょう', 'おもちゃ', 'びっくりばこ', 'すべりだい'] },
+  { id: 'gaming', name: 'ゲーム・おもちゃ', icon: '🎮', keywords: ['ゲーミング', 'アーケード', 'にんぎょう', 'おもちゃ', 'びっくりばこ', 'すべりだい', 'サンドバッグ', 'パンチングマシーン'] },
   { id: 'fossil', name: 'カセキ', icon: '🦴', keywords: ['カセキ'] },
-  { id: 'tool', name: '道具・設備', icon: '🔧', keywords: ['はつでんマシン', 'そうさばん', 'じっけん', 'けんびきょう', 'ろんぶん', 'やまほり', 'つりざお', 'きゅうきゅう', 'おそうじ', 'あみもの', 'コンピューター', 'ノートパソコン', 'タブレット', 'テレビ', 'じてんしゃ', 'かしつき'] },
-  { id: 'outdoor', name: '屋外・乗り物', icon: '🏖️', keywords: ['ビーチ', 'パラソル', 'カヌー', 'ビニールボート', 'さんばし', 'せんろ', 'しゃだんき', 'マンホール', 'どかん', 'てつのあしば', 'タイヤ', 'ておしぐるま', 'にぐるま', 'ワゴン', 'じどうはんばいき'] },
-  { id: 'decor', name: '装飾・小物', icon: '🖼️', keywords: ['かけじく', 'かおだし', 'ロケットだん', 'キャンバス', 'いちりんざし', 'ツボ', 'すいしょう', 'かんばん', 'ホワイトボード', 'メニューボード', 'ライチュウかんばん', 'やじるし', 'はかいし', 'ダンスぞう', 'ヨロイ', 'だいざ', 'おそなえ', 'うちあげ', 'ふうせん'] },
+  { id: 'tool', name: '道具・設備', icon: '🔧', keywords: ['はつでんマシン', 'そうさばん', 'じっけん', 'けんびきょう', 'ろんぶん', 'やまほり', 'つりざお', 'きゅうきゅう', 'おそうじ', 'あみもの', 'コンピューター', 'ノートパソコン', 'タブレット', 'テレビ', 'じてんしゃ', 'かしつき', 'めざまし', 'えんぴついれ', 'ゆかつきスイッチ', 'からまりコード', '風力はつでん'] },
+  { id: 'outdoor', name: '屋外・乗り物', icon: '🏖️', keywords: ['ビーチ', 'パラソル', 'カヌー', 'ビニールボート', 'さんばし', 'せんろ', 'しゃだんき', 'マンホール', 'どかん', 'てつのあしば', 'タイヤ', 'ておしぐるま', 'にぐるま', 'ワゴン', 'じどうはんばいき', 'ふねのハンドル', 'ポールさんかく', 'とまり木'] },
+  { id: 'decor', name: '装飾・小物', icon: '🖼️', keywords: ['かけじく', 'かおだし', 'ロケットだん', 'キャンバス', 'いちりんざし', 'ツボ', 'すいしょう', 'かんばん', 'ホワイトボード', 'メニューボード', 'ライチュウかんばん', 'やじるし', 'はかいし', 'ダンスぞう', 'ヨロイ', 'だいざ', 'おそなえ', 'うちあげ', 'ふうせん', 'カベかけ', 'しんぶん', 'てるてるポワルン', 'おとしもの', 'かがみ(', 'ゴミぶくろ', 'ドラムかん', 'たる', 'だんボール', 'てっこつ', 'こんもりてつ', 'はかせのオタカラ', 'ハネッコ', 'おはなのリュック', 'モンスターボール', 'ピカチュウ', '木ばこ'] },
 ];
 
 function categorizeItem(itemName) {
@@ -651,6 +653,14 @@ function App() {
           <div className="orb orb-2" />
           <div className="orb orb-3" />
         </div>
+        <img
+          src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png"
+          alt="" className="header-pokemon-left" loading="eager"
+        />
+        <img
+          src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/133.png"
+          alt="" className="header-pokemon-right" loading="eager"
+        />
         <div className="header-content">
           <div className="header-logo">
             <div className="pokeball-icon">
@@ -760,7 +770,7 @@ function App() {
           <div className="habitat-list">
             {filteredHabitats.length === 0 ? (
               <div className="no-results">
-                <div className="no-results-icon">🔍</div>
+                <img src={getPokemonImageUrl('ヤドン')} alt="" style={{ width: 64, height: 64, imageRendering: 'pixelated', opacity: 0.5 }} />
                 <p>該当する生息地が見つかりません</p>
               </div>
             ) : (
