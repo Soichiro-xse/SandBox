@@ -84,7 +84,8 @@ export function getItemIcon(itemStr) {
 }
 
 export function getHabitatImageUrl(number) {
-  return `/habitats/habitat_${number}.png`;
+  const n = parseInt(number, 10);
+  return `/habitats/habitat_${n}.png`;
 }
 
 export const AREAS = [
