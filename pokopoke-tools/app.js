@@ -674,298 +674,88 @@
   }
 
   // ============================
-  // 8. せいそくち図鑑
+  // 8. 生息地図鑑
   // ============================
-  const AREA_COLORS = {
-    "パサパサこうやの街":   { bg: "#FFF3E0", border: "#FF9800", text: "#E65100", icon: "🏜️" },
-    "ゴツゴツやまの街":     { bg: "#F3E5F5", border: "#9C27B0", text: "#6A1B9A", icon: "⛰️" },
-    "ドンヨリうみべの街":   { bg: "#E3F2FD", border: "#2196F3", text: "#0D47A1", icon: "🌊" },
-    "キラキラうきしまの街": { bg: "#F9FBE7", border: "#CDDC39", text: "#827717", icon: "✨" },
-    "まっさらな街":         { bg: "#FCE4EC", border: "#E91E63", text: "#880E4F", icon: "🏠" },
+  const AREA_STYLES = {
+    "パサパサこうやの街":  { bg:"#FFF3E0", color:"#E65100", icon:"🏜️", short:"こうや" },
+    "ドンヨリうみべの街":  { bg:"#E3F2FD", color:"#1565C0", icon:"🌊", short:"うみべ" },
+    "ゴツゴツやまの街":    { bg:"#F3E5F5", color:"#6A1B9A", icon:"⛰️", short:"やま" },
+    "キラキラうきしまの街":{ bg:"#E8F5E9", color:"#2E7D32", icon:"✨", short:"うきしま" },
   };
-  const METHOD_COLORS = {
-    "ストーリー":   { bg: "#E8EAF6", color: "#3F51B5", icon: "📖" },
-    "おねがいごと": { bg: "#FFF8E1", color: "#F57F17", icon: "⭐" },
-    "フィールド":   { bg: "#E8F5E9", color: "#2E7D32", icon: "🚶" },
-    "夜のみ":       { bg: "#212121", color: "#90CAF9", icon: "🌙" },
-    "レア/特別":    { bg: "#FCE4EC", color: "#C62828", icon: "👑" },
-  };
-  const RARITY_COLOR = { "★":"#AAB","★★":"#4CAF50","★★★":"#FF9800","★★★★":"#E91E63" };
+  const COND_ICON = { "夜":"🌙", "朝・昼・夕":"☀️", "雨":"🌧️", "晴":"⛅", "晴・曇":"⛅" };
+  const RARITY_COLOR = { "★":"#9E9E9E", "★★":"#4CAF50", "★★★":"#FF9800" };
 
-  let habitatArea   = '';
-  let habitatMethod = '';
-  let habitatQuery  = '';
+  let habitatArea  = "";
+  let habitatCond  = "";
+  let habitatQuery = "";
 
   function renderHabitats() {
-    const grid  = document.getElementById('habitatGrid');
-    const count = document.getElementById('habitatCount');
+    const grid  = document.getElementById("habitatGrid");
+    const count = document.getElementById("habitatCount");
     const q = habitatQuery.toLowerCase();
 
-    const results = HABITATS_DATA.filter(p => {
-      if (habitatArea   && !p.areas.includes(habitatArea))   return false;
-      if (habitatMethod && p.method !== habitatMethod)        return false;
-      if (q             && !p.name.toLowerCase().includes(q)) return false;
+    const results = HABITATS_DATA.filter(h => {
+      if (habitatArea && h.area !== habitatArea) return false;
+      if (habitatCond && !h.pokemon.some(p => p.cond.includes(habitatCond))) return false;
+      if (q) {
+        const nameMatch = h.name.toLowerCase().includes(q);
+        const pokeMatch = h.pokemon.some(p => p.name.toLowerCase().includes(q));
+        if (!nameMatch && !pokeMatch) return false;
+      }
       return true;
     });
 
-    count.textContent = results.length + '匹表示中（全' + HABITATS_DATA.length + '匹）';
+    count.textContent = results.length + " 件表示中（全" + HABITATS_DATA.length + " 件）";
 
-    if (results.length === 0) {
-      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>見つかりませんでした</p></div>';
+    if (!results.length) {
+      grid.innerHTML = "<div class="empty-state"><div class="empty-icon">🔍</div><p>見つかりませんでした</p></div>";
       return;
     }
 
-    grid.innerHTML = results.map(p => {
-      const spriteUrl = getSpriteUrl(p.name);
-      const spriteHtml = spriteUrl
-        ? `<img src="${spriteUrl}" alt="${escHtml(p.name)}" loading="lazy" class="hab-sprite">`
-        : `<div class="hab-sprite-placeholder">?</div>`;
-
-      const methodStyle = METHOD_COLORS[p.method] || { bg:'#eee', color:'#333', icon:'•' };
-      const rarityColor = RARITY_COLOR[p.rarity] || '#aab';
-
-      const areaBadges = p.areas.map(a => {
-        const ac = AREA_COLORS[a] || { bg:'#eee', border:'#aaa', text:'#333', icon:'📍' };
-        return `<span class="hab-area-badge" style="background:${ac.bg};border-color:${ac.border};color:${ac.text};">${ac.icon} ${a.replace('の街','')}</span>`;
-      }).join('');
-
-      const itemsHtml = p.items.length
-        ? `<div class="hab-items">🎁 ${p.items.map(i => `<span class="hab-item">${escHtml(i)}</span>`).join('')}</div>`
-        : '';
-
-      return `
-        <div class="hab-card" data-method="${escAttr(p.method)}">
-          <div class="hab-sprite-wrap">${spriteHtml}</div>
-          <div class="hab-info">
-            <div class="hab-name">${escHtml(p.name)}
-              <span class="hab-rarity" style="color:${rarityColor};">${p.rarity}</span>
-            </div>
-            <div class="hab-method-badge" style="background:${methodStyle.bg};color:${methodStyle.color};">
-              ${methodStyle.icon} ${escHtml(p.method)}
-            </div>
-            <div class="hab-areas">${areaBadges}</div>
-            <div class="hab-detail">${escHtml(p.detail)}</div>
-            ${itemsHtml}
-          </div>
-        </div>`;
-    }).join('');
+    grid.innerHTML = results.map(h => {
+      const area = AREA_STYLES[h.area] || { bg:"#EEE", color:"#333", icon:"📍", short:h.area };
+      const chips = h.pokemon.map(p => {
+        const url = getSpriteUrl(p.name);
+        const img = url ? "<img src="" + escAttr(url) + "" alt="" loading="lazy">" : "";
+        const condIcon = p.cond ? ("<span class="cond-badge">" + escHtml(COND_ICON[p.cond] || p.cond) + "</span>") : "";
+        const rare = "<span class="rarity-dot" style="color:" + (RARITY_COLOR[p.rarity] || "#aaa") + "">" + escHtml(p.rarity) + "</span>";
+        return "<span class="pokemon-chip">" + img + escHtml(p.name) + rare + condIcon + "</span>";
+      }).join("");
+      return "<div class="hab-card hab-recipe-card">" +
+        "<div class="hab-recipe-header">" +
+          "<span class="hab-no">No." + escHtml(h.no) + "</span>" +
+          "<span class="hab-name-title">" + escHtml(h.name) + "</span>" +
+          "<span class="hab-area-chip" style="background:" + area.bg + ";color:" + area.color + "">"+area.icon+" "+escHtml(area.short)+"</span>" +
+        "</div>" +
+        "<div class="hab-recipe-materials">📦 " + escHtml(h.materials) + "</div>" +
+        "<div class="pokemon-list">" + chips + "</div>" +
+      "</div>";
+    }).join("");
   }
 
-  // エリアフィルター
-  document.getElementById('habitatAreaTabs').addEventListener('click', e => {
-    const btn = e.target.closest('.hab-area-btn');
+  document.getElementById("habitatAreaTabs").addEventListener("click", e => {
+    const btn = e.target.closest(".hab-area-btn");
     if (!btn) return;
-    document.querySelectorAll('.hab-area-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    document.querySelectorAll(".hab-area-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
     habitatArea = btn.dataset.area;
     renderHabitats();
   });
 
-  // 出会い方フィルター
-  document.getElementById('habitatMethodTabs').addEventListener('click', e => {
-    const btn = e.target.closest('.hab-method-btn');
+  document.getElementById("habitatCondTabs").addEventListener("click", e => {
+    const btn = e.target.closest(".hab-method-btn");
     if (!btn) return;
-    document.querySelectorAll('.hab-method-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    habitatMethod = btn.dataset.method;
+    document.querySelectorAll("#habitatCondTabs .hab-method-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    habitatCond = btn.dataset.cond;
     renderHabitats();
   });
 
-  // 検索
-  document.getElementById('habitatSearchInput').addEventListener('input', e => {
+  document.getElementById("habitatSearchInput").addEventListener("input", e => {
     habitatQuery = e.target.value;
     renderHabitats();
   });
 
   renderHabitats();
-
-  // ============================
-  // 9. ポケモン認識
-  // ============================
-
-  // --- シルエットクイズ ---
-  (function initSilhouetteQuiz() {
-    // スプライトが存在するポケモンのみ対象
-    const allPokemon = Object.keys(POKEMON_IDS).filter(name => getSpriteUrl(name));
-    let currentPokemon = null;
-    let revealed = false;
-
-    function getPokemonSkills(name) {
-      return Object.entries(SKILLS_DATA)
-        .filter(([, data]) => data.pokemon.includes(name))
-        .map(([skill]) => skill);
-    }
-
-    function skillBadges(skills) {
-      if (!skills.length) return '<span style="color:var(--text-muted)">特技なし</span>';
-      return skills.map(s => `<span class="tag tag-skill">${escHtml(s)}</span>`).join(' ');
-    }
-
-    function pickRandom() {
-      return allPokemon[Math.floor(Math.random() * allPokemon.length)];
-    }
-
-    function startQuiz() {
-      currentPokemon = pickRandom();
-      revealed = false;
-      const img = document.getElementById('quizSprite');
-      img.src = getSpriteUrl(currentPokemon);
-      img.style.filter = 'brightness(0)';
-      document.getElementById('quizInput').value = '';
-      document.getElementById('quizResult').innerHTML = '';
-      document.getElementById('quizRevealBtn').textContent = '答えを見る';
-    }
-
-    function showAnswer(correct, guessed) {
-      revealed = true;
-      document.getElementById('quizSprite').style.filter = '';
-      document.getElementById('quizRevealBtn').textContent = '次のポケモン →';
-      const skills = getPokemonSkills(currentPokemon);
-      let cls, msg;
-      if (guessed === undefined) {
-        cls = 'reveal'; msg = `&#x1F4A1; 答え: <strong>${escHtml(currentPokemon)}</strong>`;
-      } else if (correct) {
-        cls = 'correct'; msg = `&#x2713; 正解！ <strong>${escHtml(currentPokemon)}</strong>`;
-      } else {
-        cls = 'wrong'; msg = `&#x2717; 不正解。正解は <strong>${escHtml(currentPokemon)}</strong>`;
-      }
-      document.getElementById('quizResult').innerHTML =
-        `<div class="quiz-result ${cls}">${msg}<br>特技: ${skillBadges(skills)}</div>`;
-    }
-
-    document.getElementById('quizCheckBtn').addEventListener('click', () => {
-      if (revealed || !currentPokemon) return;
-      const answer = document.getElementById('quizInput').value.trim();
-      showAnswer(answer === currentPokemon, answer);
-    });
-
-    document.getElementById('quizRevealBtn').addEventListener('click', () => {
-      if (!revealed) showAnswer();
-      else startQuiz();
-    });
-
-    document.getElementById('quizNextBtn').addEventListener('click', startQuiz);
-
-    document.getElementById('quizInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('quizCheckBtn').click();
-    });
-
-    startQuiz();
-  })();
-
-  // --- 画像から判定 ---
-  (function initImageRecognizer() {
-    // 色相 → 関連スキル マッピング
-    const COLOR_CATEGORIES = [
-      { label: '🔥 ほのお系', skills: ['もやす'], hueMin: [0, 330], hueMax: [30, 360] },
-      { label: '⚡ でんき系', skills: ['はつでん'], hueMin: [30], hueMax: [70] },
-      { label: '🌿 くさ系',   skills: ['さいばい', 'ちらかす'], hueMin: [70], hueMax: [170] },
-      { label: '💧 みず系',   skills: ['うるおす'], hueMin: [170], hueMax: [260] },
-      { label: '🌸 その他',   skills: ['さがしもの', 'テレポート', 'しわける', 'もりあげる'], hueMin: [260], hueMax: [330] },
-    ];
-
-    function rgbToHue(r, g, b) {
-      r /= 255; g /= 255; b /= 255;
-      const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      if (max === min) return -1;
-      const d = max - min;
-      const s = max === 0 ? 0 : d / max;
-      if (s < 0.25) return -1; // グレー系は除外
-      let h;
-      switch (max) {
-        case r: h = ((g - b) / d + (g < b ? 6 : 0)) * 60; break;
-        case g: h = ((b - r) / d + 2) * 60; break;
-        default: h = ((r - g) / d + 4) * 60;
-      }
-      return h;
-    }
-
-    function getDominantHue(data) {
-      const buckets = new Array(36).fill(0);
-      let total = 0;
-      for (let i = 0; i < data.length; i += 16) {
-        const hue = rgbToHue(data[i], data[i + 1], data[i + 2]);
-        if (hue < 0) continue;
-        buckets[Math.floor(hue / 10)]++;
-        total++;
-      }
-      if (!total) return -1;
-      return buckets.indexOf(Math.max(...buckets)) * 10 + 5;
-    }
-
-    function getCategoryForHue(hue) {
-      if (hue < 0) return null;
-      for (const cat of COLOR_CATEGORIES) {
-        for (let i = 0; i < cat.hueMin.length; i++) {
-          if (hue >= cat.hueMin[i] && hue <= cat.hueMax[i]) return cat;
-        }
-      }
-      return COLOR_CATEGORIES[COLOR_CATEGORIES.length - 1];
-    }
-
-    function renderRecognizeResult(cat) {
-      const el = document.getElementById('recognizeResult');
-      if (!cat) {
-        el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F504;</div><p>色情報を取得できませんでした。<br>カラーの画像をお試しください。</p></div>';
-        return;
-      }
-      const matchedPokemon = new Set();
-      cat.skills.forEach(skill => {
-        if (SKILLS_DATA[skill]) SKILLS_DATA[skill].pokemon.forEach(p => matchedPokemon.add(p));
-      });
-      const chips = [...matchedPokemon].map(name => {
-        const url = getSpriteUrl(name);
-        const img = url ? `<img src="${url}" alt="" loading="lazy">` : '';
-        return `<span class="pokemon-chip">${img}${escHtml(name)}</span>`;
-      }).join('');
-      el.innerHTML = `
-        <div class="skill-card">
-          <h4>
-            <span style="font-size:1rem;">${escHtml(cat.label)}</span>
-            <span style="font-size:0.82rem;font-weight:400;color:var(--text-sub);">
-              関連スキル: ${cat.skills.map(s => `<span class="tag tag-skill">${escHtml(s)}</span>`).join(' ')}
-            </span>
-          </h4>
-          <div class="pokemon-list">${chips}</div>
-        </div>`;
-    }
-
-    function analyzeImage(file) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        const img = new Image();
-        img.onload = () => {
-          const cvs = document.createElement('canvas');
-          cvs.width = Math.min(img.width, 200);
-          cvs.height = Math.min(img.height, 200);
-          const ctx = cvs.getContext('2d');
-          ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
-          const { data } = ctx.getImageData(0, 0, cvs.width, cvs.height);
-          const hue = getDominantHue(data);
-          document.getElementById('recognizePreview').innerHTML =
-            `<img src="${escAttr(e.target.result)}" alt="アップロード画像">`;
-          renderRecognizeResult(getCategoryForHue(hue));
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    const dropArea = document.getElementById('recognizeDropArea');
-    const fileInput = document.getElementById('recognizeFileInput');
-
-    dropArea.addEventListener('click', () => fileInput.click());
-    dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('drag-over'); });
-    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
-    dropArea.addEventListener('drop', e => {
-      e.preventDefault();
-      dropArea.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) analyzeImage(file);
-    });
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files[0]) analyzeImage(fileInput.files[0]);
-    });
-  })();
 
 })();
