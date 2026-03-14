@@ -540,9 +540,14 @@ body {
   display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: var(--text-muted);
 }
 
-.pokemon-info { display: flex; flex-direction: column; align-items: center; gap: 3px; position: relative; z-index: 1; }
+.pokemon-info { display: flex; flex-direction: column; align-items: center; gap: 3px; position: relative; z-index: 1; max-width: 100%; overflow: hidden; }
 
-.pokemon-name { font-size: 0.78rem; font-weight: 800; color: var(--text); }
+.pokemon-name {
+  font-size: 0.78rem; font-weight: 800; color: var(--text);
+  word-break: break-all; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
 
 .pokemon-types { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; }
 
