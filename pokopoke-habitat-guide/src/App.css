@@ -1002,6 +1002,133 @@ body {
   .pokemon-img-wrapper img { width: 72px; height: 72px; }
 }
 
+/* ======= Progress Panel (コンプリートチェッカー) ======= */
+.progress-panel {
+  background: var(--bg-card); border-radius: 16px; padding: 14px 16px;
+  margin-bottom: 16px; box-shadow: 0 2px 10px var(--shadow);
+  border: 2px solid var(--border);
+}
+
+.progress-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+}
+
+.progress-title { font-size: 0.82rem; font-weight: 800; color: var(--text); }
+.progress-count { font-size: 0.75rem; font-weight: 700; color: var(--accent); }
+
+.progress-bar {
+  height: 10px; background: var(--border); border-radius: 5px; overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%; border-radius: 5px; transition: width 0.5s ease;
+  background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e);
+}
+
+.progress-complete {
+  text-align: center; margin-top: 8px; font-size: 0.85rem; font-weight: 900;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  animation: pulseText 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseText {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ======= Catch Button ======= */
+.catch-btn {
+  position: absolute; top: 4px; right: 4px; z-index: 5;
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border);
+  background: var(--bg-card); color: var(--text-muted); font-size: 0.7rem;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center;
+  justify-content: center; padding: 0; line-height: 1;
+}
+
+.catch-btn:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.15); }
+
+.catch-btn.caught {
+  background: #22c55e; border-color: #16a34a; color: white;
+}
+
+.catch-btn.caught:hover { background: #ef4444; border-color: #dc2626; }
+
+/* Caught card styling */
+.pokemon-card.caught .pokemon-img-wrapper img,
+.pokemon-list-card.caught .pokemon-list-img img {
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.15)) brightness(1.05);
+}
+
+.pokemon-card.caught::before,
+.pokemon-list-card.caught::before {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: #22c55e; z-index: 4;
+}
+
+/* ======= Habitat Complete Badge ======= */
+.complete-badge {
+  font-size: 0.55rem; font-weight: 900; color: white; padding: 2px 6px;
+  border-radius: 4px; background: linear-gradient(135deg, #22c55e, #16a34a);
+  letter-spacing: 0.5px; animation: pulseText 2s ease-in-out infinite;
+}
+
+.habitat-complete { border-color: rgba(34, 197, 94, 0.4); }
+.habitat-complete:hover { border-color: rgba(34, 197, 94, 0.6); }
+
+.habitat-caught-count {
+  font-size: 0.62rem; color: var(--text-muted); font-weight: 700;
+  margin-left: 6px; background: var(--accent-bg); padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* ======= Modal Catch Button ======= */
+.modal-catch-btn {
+  margin-top: 6px; padding: 6px 16px; border-radius: 20px;
+  border: 2px solid var(--border); background: var(--bg-card);
+  color: var(--text); font-size: 0.8rem; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; font-family: inherit;
+}
+
+.modal-catch-btn:hover { border-color: #22c55e; color: #22c55e; }
+
+.modal-catch-btn.caught {
+  background: #22c55e; border-color: #16a34a; color: white;
+}
+
+.modal-catch-btn.caught:hover { background: #ef4444; border-color: #dc2626; }
+
+/* ======= Recommendation (逆引き推薦) ======= */
+.modal-recommendation {
+  padding: 20px 24px 32px;
+}
+
+.modal-recommendation h3 {
+  font-size: 0.9rem; font-weight: 800; color: var(--text-secondary); margin-bottom: 4px;
+}
+
+.recommendation-desc {
+  font-size: 0.72rem; color: var(--text-muted); margin-bottom: 12px;
+}
+
+.modal-habitat-item.recommended {
+  border-left-width: 5px;
+  background: var(--accent-bg);
+  position: relative;
+}
+
+.recommend-tag {
+  position: absolute; top: -1px; right: 8px;
+  font-size: 0.55rem; font-weight: 900; color: white;
+  background: linear-gradient(135deg, #ef4444, #f59e0b);
+  padding: 2px 8px; border-radius: 0 0 6px 6px;
+  letter-spacing: 1px;
+}
+
+.modal-habitat-condition {
+  font-size: 0.62rem; color: var(--text-muted); font-weight: 600;
+}
+
 /* ======= Scrollbar ======= */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

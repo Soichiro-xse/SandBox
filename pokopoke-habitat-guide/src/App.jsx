@@ -72,7 +72,7 @@ function ItemTag({ item }) {
   );
 }
 
-function PokemonCard({ pokemon, onClick }) {
+function PokemonCard({ pokemon, onClick, caught, onToggleCaught }) {
   const imgUrl = getPokemonImageUrl(pokemon.name);
   const types = getPokemonTypes(pokemon.name);
   const isRare = pokemon.condition === '珍しい';
@@ -80,11 +80,20 @@ function PokemonCard({ pokemon, onClick }) {
 
   return (
     <div
-      className={`pokemon-card ${isRare ? 'rare' : ''}`}
+      className={`pokemon-card ${isRare ? 'rare' : ''} ${caught ? 'caught' : ''}`}
       data-type={primaryType}
       onClick={() => onClick && onClick(pokemon.name)}
     >
       {isRare && <div className="rare-sparkle" />}
+      {onToggleCaught && (
+        <button
+          className={`catch-btn ${caught ? 'caught' : ''}`}
+          onClick={(e) => onToggleCaught(pokemon.name, e)}
+          title={caught ? '捕獲済み' : '未捕獲'}
+        >
+          {caught ? '✓' : '○'}
+        </button>
+      )}
       <div className="pokemon-img-wrapper">
         {imgUrl ? (
           <img src={imgUrl} alt={pokemon.name} loading="lazy" />
@@ -103,12 +112,36 @@ function PokemonCard({ pokemon, onClick }) {
   );
 }
 
-function PokemonModal({ name, onClose, onHabitatClick }) {
+function getHabitatRecommendation(pokemonName, pokemonData) {
+  if (!pokemonData) return [];
+  return pokemonData.habitats.map(h => {
+    const habitat = habitats.find(hb => hb.id === h.id);
+    if (!habitat) return null;
+    const pokemonEntry = habitat.pokemon.find(p => p.name === pokemonName);
+    let score = 100;
+    // 条件なしが最優先
+    if (!pokemonEntry?.condition) score += 40;
+    else if (pokemonEntry.condition === '珍しい') score -= 20;
+    else if (pokemonEntry.condition === '夜' || pokemonEntry.condition === '昼') score += 10;
+    else if (pokemonEntry.condition === '雨') score += 5;
+    // ポケモン数が多い生息地 = 他のポケモンも一緒に捕れて効率的
+    score += Math.min(habitat.pokemon.length * 3, 30);
+    // 必要アイテム少ない = 作りやすい
+    score -= habitat.items.length * 2;
+    const condText = pokemonEntry?.condition || '条件なし';
+    return { ...h, score, condition: condText, totalPokemon: habitat.pokemon.length };
+  }).filter(Boolean).sort((a, b) => b.score - a.score);
+}
+
+function PokemonModal({ name, onClose, onHabitatClick, caughtPokemon, onToggleCaught }) {
   const id = POKEMON_NAME_TO_ID[name];
   const types = getPokemonTypes(name);
   const hdImg = getPokemonImageUrl(name, true);
   const allPokemon = useMemo(() => getAllPokemon(), []);
   const pokemonData = allPokemon.find(p => p.name === name);
+  const isCaught = caughtPokemon && caughtPokemon.has(name);
+
+  const recommendations = useMemo(() => getHabitatRecommendation(name, pokemonData), [name, pokemonData]);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -141,21 +174,32 @@ function PokemonModal({ name, onClose, onHabitatClick }) {
                 ))}
               </div>
             )}
+            {onToggleCaught && (
+              <button
+                className={`modal-catch-btn ${isCaught ? 'caught' : ''}`}
+                onClick={() => onToggleCaught(name)}
+              >
+                {isCaught ? '✓ 捕獲済み' : '○ 未捕獲'}
+              </button>
+            )}
           </div>
         </div>
-        {pokemonData && (
-          <div className="modal-habitats">
-            <h3>出現する生息地 ({pokemonData.habitats.length})</h3>
+        {recommendations.length > 0 && (
+          <div className="modal-recommendation">
+            <h3>おすすめ生息地</h3>
+            <p className="recommendation-desc">条件・効率から最適な生息地を推薦</p>
             <div className="modal-habitat-list">
-              {pokemonData.habitats.map((h, i) => {
+              {recommendations.map((h, i) => {
                 const area = AREAS.find(a => a.id === h.area);
                 return (
-                  <div key={i} className="modal-habitat-item clickable" style={{ borderLeftColor: area?.color }}
+                  <div key={i} className={`modal-habitat-item clickable ${i === 0 ? 'recommended' : ''}`} style={{ borderLeftColor: area?.color }}
                     onClick={() => onHabitatClick && onHabitatClick(h.id)}>
+                    {i === 0 && <span className="recommend-tag">BEST</span>}
                     <img src={getHabitatImageUrl(h.number)} alt="" className="modal-habitat-thumb" loading="lazy" />
                     <div className="modal-habitat-text">
                       <span className="modal-habitat-num">No.{h.number}</span>
                       <span className="modal-habitat-name">{h.name}</span>
+                      <span className="modal-habitat-condition">{h.condition} / 全{h.totalPokemon}匹</span>
                     </div>
                     <span className="modal-habitat-area" style={{ backgroundColor: area?.color }}>
                       {area?.icon}
@@ -171,13 +215,17 @@ function PokemonModal({ name, onClose, onHabitatClick }) {
   );
 }
 
-function HabitatCard({ habitat, area, forceExpanded, onPokemonClick, style }) {
+function HabitatCard({ habitat, area, forceExpanded, onPokemonClick, style, caughtPokemon, onToggleCaught }) {
   const [expanded, setExpanded] = useState(false);
   const isOpen = forceExpanded || expanded;
   const habitatImg = getHabitatImageUrl(habitat.number);
 
+  const caughtInHabitat = caughtPokemon ? habitat.pokemon.filter(p => caughtPokemon.has(p.name)).length : 0;
+  const totalInHabitat = habitat.pokemon.length;
+  const isComplete = caughtPokemon && totalInHabitat > 0 && caughtInHabitat === totalInHabitat;
+
   return (
-    <div className="habitat-card" style={{ ...style }}>
+    <div className={`habitat-card ${isComplete ? 'habitat-complete' : ''}`} style={{ ...style }}>
       <div className="habitat-header" onClick={() => setExpanded(!expanded)}>
         <div className="habitat-visual-row">
           <div className="habitat-img-wrapper">
@@ -189,6 +237,7 @@ function HabitatCard({ habitat, area, forceExpanded, onPokemonClick, style }) {
               <span className="habitat-area-tag" style={{ backgroundColor: area.color }}>
                 {area.icon} {area.name}
               </span>
+              {isComplete && <span className="complete-badge">COMPLETE</span>}
             </div>
             <h3 className="habitat-name">{habitat.name}</h3>
             <div className="habitat-pokemon-preview">
@@ -199,6 +248,9 @@ function HabitatCard({ habitat, area, forceExpanded, onPokemonClick, style }) {
                 ) : null;
               })}
               {habitat.pokemon.length > 5 && <span className="preview-more">+{habitat.pokemon.length - 5}</span>}
+              {caughtPokemon && (
+                <span className="habitat-caught-count">{caughtInHabitat}/{totalInHabitat}</span>
+              )}
             </div>
           </div>
           <span className={`expand-icon ${isOpen ? 'expanded' : ''}`}>&#9660;</span>
@@ -214,7 +266,7 @@ function HabitatCard({ habitat, area, forceExpanded, onPokemonClick, style }) {
       <div className={`habitat-pokemon-grid-wrapper ${isOpen ? 'open' : ''}`}>
         <div className="habitat-pokemon-grid">
           {habitat.pokemon.map((p, i) => (
-            <PokemonCard key={i} pokemon={p} onClick={onPokemonClick} />
+            <PokemonCard key={i} pokemon={p} onClick={onPokemonClick} caught={caughtPokemon && caughtPokemon.has(p.name)} onToggleCaught={onToggleCaught} />
           ))}
         </div>
       </div>
@@ -222,7 +274,7 @@ function HabitatCard({ habitat, area, forceExpanded, onPokemonClick, style }) {
   );
 }
 
-function StatsPanel({ filteredHabitats }) {
+function StatsPanel({ filteredHabitats, caughtPokemon }) {
   const totalPokemon = useMemo(() => {
     const names = new Set();
     filteredHabitats.forEach(h => h.pokemon.forEach(p => names.add(p.name)));
@@ -237,28 +289,49 @@ function StatsPanel({ filteredHabitats }) {
     return names.size;
   }, [filteredHabitats]);
 
+  const allUnique = useMemo(() => {
+    const names = new Set();
+    habitats.forEach(h => h.pokemon.forEach(p => names.add(p.name)));
+    return names.size;
+  }, []);
+
+  const caughtCount = caughtPokemon.size;
+  const progressPct = allUnique > 0 ? Math.round((caughtCount / allUnique) * 100) : 0;
+
   return (
-    <div className="stats-panel">
-      <div className="stat-item stat-habitat">
-        <div className="stat-icon">🏕️</div>
-        <span className="stat-number">{filteredHabitats.length}</span>
-        <span className="stat-label">生息地</span>
+    <>
+      <div className="stats-panel">
+        <div className="stat-item stat-habitat">
+          <div className="stat-icon">🏕️</div>
+          <span className="stat-number">{filteredHabitats.length}</span>
+          <span className="stat-label">生息地</span>
+        </div>
+        <div className="stat-item stat-pokemon">
+          <div className="stat-icon">🐾</div>
+          <span className="stat-number">{totalPokemon}</span>
+          <span className="stat-label">ポケモン</span>
+        </div>
+        <div className="stat-item stat-rare">
+          <div className="stat-icon">⭐</div>
+          <span className="stat-number">{rarePokemon}</span>
+          <span className="stat-label">珍しい</span>
+        </div>
       </div>
-      <div className="stat-item stat-pokemon">
-        <div className="stat-icon">🐾</div>
-        <span className="stat-number">{totalPokemon}</span>
-        <span className="stat-label">ポケモン</span>
+      <div className="progress-panel">
+        <div className="progress-header">
+          <span className="progress-title">コンプリート進捗</span>
+          <span className="progress-count">{caughtCount} / {allUnique} 匹 ({progressPct}%)</span>
+        </div>
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+        </div>
+        {progressPct === 100 && <div className="progress-complete">コンプリート達成!</div>}
       </div>
-      <div className="stat-item stat-rare">
-        <div className="stat-icon">⭐</div>
-        <span className="stat-number">{rarePokemon}</span>
-        <span className="stat-label">珍しい</span>
-      </div>
-    </div>
+    </>
   );
 }
 
-function PokemonListView({ searchQuery, onPokemonClick }) {
+function PokemonListView({ searchQuery, onPokemonClick, caughtPokemon, onToggleCaught }) {
   const allPokemon = useMemo(() => getAllPokemon(), []);
 
   const filtered = useMemo(() => {
@@ -276,13 +349,21 @@ function PokemonListView({ searchQuery, onPokemonClick }) {
           const types = getPokemonTypes(p.name);
           const img = getPokemonImageUrl(p.name);
           const isRare = p.conditions.has('珍しい');
+          const isCaught = caughtPokemon.has(p.name);
           return (
             <div
               key={p.name}
-              className={`pokemon-list-card ${isRare ? 'rare' : ''}`}
+              className={`pokemon-list-card ${isRare ? 'rare' : ''} ${isCaught ? 'caught' : ''}`}
               onClick={() => onPokemonClick(p.name)}
             >
               {isRare && <div className="rare-sparkle" />}
+              <button
+                className={`catch-btn ${isCaught ? 'caught' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onToggleCaught(p.name, e); }}
+                title={isCaught ? '捕獲済み' : '未捕獲'}
+              >
+                {isCaught ? '✓' : '○'}
+              </button>
               <div className="pokemon-list-img">
                 {img ? <img src={img} alt={p.name} loading="lazy" /> : <div className="pokemon-placeholder">?</div>}
               </div>
@@ -310,7 +391,7 @@ function PokemonListView({ searchQuery, onPokemonClick }) {
   );
 }
 
-function HabitatDetailModal({ habitatId, onClose, onPokemonClick }) {
+function HabitatDetailModal({ habitatId, onClose, onPokemonClick, caughtPokemon, onToggleCaught }) {
   const habitat = habitats.find(h => h.id === habitatId);
   const area = habitat ? AREAS.find(a => a.id === habitat.area) : null;
 
@@ -351,7 +432,7 @@ function HabitatDetailModal({ habitatId, onClose, onPokemonClick }) {
             <h3>出現ポケモン ({habitat.pokemon.length})</h3>
             <div className="habitat-pokemon-grid">
               {habitat.pokemon.map((p, i) => (
-                <PokemonCard key={i} pokemon={p} onClick={onPokemonClick} />
+                <PokemonCard key={i} pokemon={p} onClick={onPokemonClick} caught={caughtPokemon && caughtPokemon.has(p.name)} onToggleCaught={onToggleCaught} />
               ))}
             </div>
           </div>
@@ -616,6 +697,24 @@ function App() {
   const [modalPokemon, setModalPokemon] = useState(null);
   const [modalHabitat, setModalHabitat] = useState(null);
 
+  // Feature 1: コンプリートチェッカー
+  const [caughtPokemon, setCaughtPokemon] = useState(() => {
+    try {
+      const saved = localStorage.getItem('caughtPokemon');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const toggleCaught = useCallback((name, e) => {
+    if (e) e.stopPropagation();
+    setCaughtPokemon(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      localStorage.setItem('caughtPokemon', JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
     localStorage.setItem('darkMode', darkMode);
@@ -764,7 +863,7 @@ function App() {
           )}
         </div>
 
-        {viewMode === 'habitat' && <StatsPanel filteredHabitats={filteredHabitats} />}
+        {viewMode === 'habitat' && <StatsPanel filteredHabitats={filteredHabitats} caughtPokemon={caughtPokemon} />}
 
         {viewMode === 'habitat' ? (
           <div className="habitat-list">
@@ -783,6 +882,8 @@ function App() {
                     area={area}
                     forceExpanded={expandAll}
                     onPokemonClick={handlePokemonClick}
+                    caughtPokemon={caughtPokemon}
+                    onToggleCaught={toggleCaught}
                     style={{ animationDelay: `${Math.min(idx * 0.03, 0.5)}s` }}
                   />
                 );
@@ -790,7 +891,7 @@ function App() {
             )}
           </div>
         ) : viewMode === 'pokemon' ? (
-          <PokemonListView searchQuery={searchQuery} onPokemonClick={handlePokemonClick} />
+          <PokemonListView searchQuery={searchQuery} onPokemonClick={handlePokemonClick} caughtPokemon={caughtPokemon} onToggleCaught={toggleCaught} />
         ) : (
           <ItemListView searchQuery={searchQuery} onHabitatClick={handleHabitatClick} />
         )}
@@ -806,10 +907,10 @@ function App() {
       <ScrollToTop />
 
       {modalPokemon && (
-        <PokemonModal name={modalPokemon} onClose={() => setModalPokemon(null)} onHabitatClick={handleHabitatClick} />
+        <PokemonModal name={modalPokemon} onClose={() => setModalPokemon(null)} onHabitatClick={handleHabitatClick} caughtPokemon={caughtPokemon} onToggleCaught={toggleCaught} />
       )}
       {modalHabitat && (
-        <HabitatDetailModal habitatId={modalHabitat} onClose={() => setModalHabitat(null)} onPokemonClick={(name) => { setModalHabitat(null); setModalPokemon(name); }} />
+        <HabitatDetailModal habitatId={modalHabitat} onClose={() => setModalHabitat(null)} onPokemonClick={(name) => { setModalHabitat(null); setModalPokemon(name); }} caughtPokemon={caughtPokemon} onToggleCaught={toggleCaught} />
       )}
     </div>
   );
