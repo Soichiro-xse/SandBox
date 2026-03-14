@@ -277,10 +277,10 @@ body {
 .stat-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
 
 /* ======= Habitat Cards ======= */
-.habitat-list { display: flex; flex-direction: column; gap: 10px; }
+.habitat-list { display: flex; flex-direction: column; gap: 12px; }
 
 .habitat-card {
-  background: var(--bg-card); border-radius: 16px; border-left: 5px solid var(--accent);
+  background: var(--bg-card); border-radius: 16px;
   box-shadow: 0 2px 12px var(--shadow); overflow: hidden; transition: all 0.3s;
   animation: slideUp 0.4s ease both;
 }
@@ -292,35 +292,51 @@ body {
 
 .habitat-card:hover { box-shadow: 0 4px 20px var(--shadow-hover); }
 
-.habitat-header { padding: 14px 16px; cursor: pointer; user-select: none; transition: background 0.2s; }
+.habitat-header { padding: 14px 14px; cursor: pointer; user-select: none; transition: background 0.2s; }
 .habitat-header:active { background: var(--accent-bg); }
 
-.habitat-title-row {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+.habitat-visual-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
 }
 
-.habitat-terrain-icon { font-size: 1.8rem; flex-shrink: 0; }
+.habitat-img-wrapper {
+  width: 90px; height: 90px; border-radius: 12px; overflow: hidden;
+  flex-shrink: 0; background: var(--pokemon-card-bg);
+  box-shadow: 0 2px 8px var(--shadow);
+}
 
-.habitat-title-text { flex: 1; min-width: 0; }
+.habitat-terrain-img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform 0.3s;
+}
 
-.habitat-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.habitat-card:hover .habitat-terrain-img { transform: scale(1.08); }
+
+.habitat-info-side { flex: 1; min-width: 0; }
+
+.habitat-name-row {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;
+}
 
 .habitat-number {
-  font-size: 0.68rem; font-weight: 700; color: var(--accent);
+  font-size: 0.65rem; font-weight: 700; color: var(--accent);
   background: var(--accent-bg); padding: 2px 8px; border-radius: 4px;
   letter-spacing: 1px; flex-shrink: 0;
 }
 
-.habitat-name { font-size: 1.05rem; font-weight: 700; margin: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.habitat-name {
+  font-size: 1rem; font-weight: 700; margin: 0 0 6px;
+  color: var(--text);
+}
 
 .habitat-area-tag {
-  font-size: 0.65rem; padding: 2px 10px; border-radius: 10px;
+  font-size: 0.6rem; padding: 2px 8px; border-radius: 10px;
   color: white; font-weight: 600; white-space: nowrap; display: inline-block;
 }
 
 .expand-icon {
   font-size: 0.6rem; transition: transform 0.3s; display: inline-block;
-  color: var(--accent); flex-shrink: 0;
+  color: var(--accent); flex-shrink: 0; align-self: flex-start; margin-top: 4px;
 }
 
 .expand-icon.expanded { transform: rotate(180deg); }
@@ -330,29 +346,29 @@ body {
 .habitat-items { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
 
 .item-tag {
-  font-size: 0.72rem; background: var(--bg-tag); color: #2e7d32;
+  font-size: 0.7rem; background: var(--bg-tag); color: #2e7d32;
   padding: 3px 8px; border-radius: 8px; font-weight: 600;
   display: inline-flex; align-items: center; gap: 3px;
 }
 
-.item-icon { font-size: 0.85rem; }
+.item-icon { font-size: 0.8rem; }
 
 [data-theme="dark"] .item-tag { color: #66bb6a; }
 
 .habitat-pokemon-preview {
-  display: flex; align-items: center; flex-shrink: 0;
+  display: flex; align-items: center; margin-top: 4px;
 }
 
 .preview-avatar {
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 2px solid var(--bg-card); margin-left: -8px;
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--bg-card); margin-left: -6px;
   image-rendering: pixelated; background: var(--pokemon-card-bg);
 }
 
 .preview-avatar:first-child { margin-left: 0; }
 
 .preview-more {
-  font-size: 0.7rem; color: var(--text-muted); margin-left: 4px; font-weight: 600;
+  font-size: 0.65rem; color: var(--text-muted); margin-left: 4px; font-weight: 600;
 }
 
 /* ======= Pokemon Grid Slide ======= */
@@ -546,7 +562,11 @@ body {
 
 .modal-habitat-item:active { background: var(--accent-bg); }
 
-.modal-habitat-terrain { font-size: 1.2rem; }
+.modal-habitat-thumb {
+  width: 48px; height: 48px; border-radius: 8px; object-fit: cover;
+  flex-shrink: 0; background: var(--pokemon-card-bg);
+}
+
 .modal-habitat-text { flex: 1; display: flex; flex-direction: column; gap: 1px; }
 .modal-habitat-num { font-size: 0.65rem; font-weight: 700; color: var(--text-muted); }
 .modal-habitat-name { font-size: 0.85rem; font-weight: 600; color: var(--text); }

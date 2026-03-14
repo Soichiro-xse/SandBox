@@ -83,6 +83,13 @@ export function getItemIcon(itemStr) {
   return ITEM_ICONS[name] || '📦';
 }
 
+export function getHabitatImageUrl(number) {
+  if (number === 1) {
+    return 'https://img.gamewith.jp/img/f36a76d3b8711e361306a422f4096040.png';
+  }
+  return `https://img.gamewith.jp/article_tools/pocoapokemon/gacha/habitat_${number}.png`;
+}
+
 export const AREAS = [
   { id: 'pasapasa', name: 'パサパサこうやの街', color: '#e8c170', icon: '🏜️' },
   { id: 'donyori', name: 'ドンヨリうみべの街', color: '#6bb5e0', icon: '🌊' },

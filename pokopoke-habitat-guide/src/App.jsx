@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { habitats, AREAS, POKEMON_NAME_TO_ID, TYPE_COLORS, POKEMON_TYPES, getTerrainIcon, getItemIcon } from './data/habitats'
+import { habitats, AREAS, POKEMON_NAME_TO_ID, TYPE_COLORS, POKEMON_TYPES, getTerrainIcon, getItemIcon, getHabitatImageUrl } from './data/habitats'
 import './App.css'
 
 function getPokemonImageUrl(name, hd = false) {
@@ -149,7 +149,7 @@ function PokemonModal({ name, onClose }) {
                 const area = AREAS.find(a => a.id === h.area);
                 return (
                   <div key={i} className="modal-habitat-item" style={{ borderLeftColor: area?.color }}>
-                    <span className="modal-habitat-terrain">{getTerrainIcon(h.name)}</span>
+                    <img src={getHabitatImageUrl(h.number)} alt="" className="modal-habitat-thumb" loading="lazy" />
                     <div className="modal-habitat-text">
                       <span className="modal-habitat-num">No.{h.number}</span>
                       <span className="modal-habitat-name">{h.name}</span>
@@ -171,21 +171,32 @@ function PokemonModal({ name, onClose }) {
 function HabitatCard({ habitat, area, forceExpanded, onPokemonClick, style }) {
   const [expanded, setExpanded] = useState(false);
   const isOpen = forceExpanded || expanded;
-  const terrainIcon = getTerrainIcon(habitat.name);
+  const habitatImg = getHabitatImageUrl(habitat.number);
 
   return (
-    <div className="habitat-card" style={{ borderLeftColor: area.color, ...style }}>
+    <div className="habitat-card" style={{ ...style }}>
       <div className="habitat-header" onClick={() => setExpanded(!expanded)}>
-        <div className="habitat-title-row">
-          <span className="habitat-terrain-icon">{terrainIcon}</span>
-          <div className="habitat-title-text">
+        <div className="habitat-visual-row">
+          <div className="habitat-img-wrapper">
+            <img src={habitatImg} alt={habitat.name} className="habitat-terrain-img" loading="lazy" />
+          </div>
+          <div className="habitat-info-side">
             <div className="habitat-name-row">
               <span className="habitat-number">No.{habitat.number}</span>
-              <h3 className="habitat-name">{habitat.name}</h3>
+              <span className="habitat-area-tag" style={{ backgroundColor: area.color }}>
+                {area.icon} {area.name}
+              </span>
             </div>
-            <span className="habitat-area-tag" style={{ backgroundColor: area.color }}>
-              {area.icon} {area.name}
-            </span>
+            <h3 className="habitat-name">{habitat.name}</h3>
+            <div className="habitat-pokemon-preview">
+              {habitat.pokemon.slice(0, 5).map((p, i) => {
+                const img = getPokemonImageUrl(p.name);
+                return img ? (
+                  <img key={i} src={img} alt="" className="preview-avatar" style={{ zIndex: 5 - i }} loading="lazy" />
+                ) : null;
+              })}
+              {habitat.pokemon.length > 5 && <span className="preview-more">+{habitat.pokemon.length - 5}</span>}
+            </div>
           </div>
           <span className={`expand-icon ${isOpen ? 'expanded' : ''}`}>&#9660;</span>
         </div>
@@ -194,15 +205,6 @@ function HabitatCard({ habitat, area, forceExpanded, onPokemonClick, style }) {
             {habitat.items.map((item, i) => (
               <ItemTag key={i} item={item} />
             ))}
-          </div>
-          <div className="habitat-pokemon-preview">
-            {habitat.pokemon.slice(0, 4).map((p, i) => {
-              const img = getPokemonImageUrl(p.name);
-              return img ? (
-                <img key={i} src={img} alt="" className="preview-avatar" style={{ zIndex: 4 - i }} loading="lazy" />
-              ) : null;
-            })}
-            {habitat.pokemon.length > 4 && <span className="preview-more">+{habitat.pokemon.length - 4}</span>}
           </div>
         </div>
       </div>
