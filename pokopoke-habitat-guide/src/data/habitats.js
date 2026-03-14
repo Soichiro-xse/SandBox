@@ -84,10 +84,7 @@ export function getItemIcon(itemStr) {
 }
 
 export function getHabitatImageUrl(number) {
-  if (number === 1) {
-    return 'https://img.gamewith.jp/img/f36a76d3b8711e361306a422f4096040.png';
-  }
-  return `https://img.gamewith.jp/article_tools/pocoapokemon/gacha/habitat_${number}.png`;
+  return `/habitats/habitat_${number}.png`;
 }
 
 export const AREAS = [
