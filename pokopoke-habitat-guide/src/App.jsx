@@ -101,7 +101,7 @@ function PokemonCard({ pokemon, onClick }) {
   );
 }
 
-function PokemonModal({ name, onClose }) {
+function PokemonModal({ name, onClose, onHabitatClick }) {
   const id = POKEMON_NAME_TO_ID[name];
   const types = getPokemonTypes(name);
   const hdImg = getPokemonImageUrl(name, true);
@@ -148,7 +148,8 @@ function PokemonModal({ name, onClose }) {
               {pokemonData.habitats.map((h, i) => {
                 const area = AREAS.find(a => a.id === h.area);
                 return (
-                  <div key={i} className="modal-habitat-item" style={{ borderLeftColor: area?.color }}>
+                  <div key={i} className="modal-habitat-item clickable" style={{ borderLeftColor: area?.color }}
+                    onClick={() => onHabitatClick && onHabitatClick(h.id)}>
                     <img src={getHabitatImageUrl(h.number)} alt="" className="modal-habitat-thumb" loading="lazy" />
                     <div className="modal-habitat-text">
                       <span className="modal-habitat-num">No.{h.number}</span>
@@ -307,6 +308,125 @@ function PokemonListView({ searchQuery, onPokemonClick }) {
   );
 }
 
+function HabitatDetailModal({ habitatId, onClose, onPokemonClick }) {
+  const habitat = habitats.find(h => h.id === habitatId);
+  const area = habitat ? AREAS.find(a => a.id === habitat.area) : null;
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
+  if (!habitat || !area) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>&times;</button>
+        <div className="habitat-detail-header" style={{ borderBottomColor: area.color }}>
+          <img src={getHabitatImageUrl(habitat.number)} alt={habitat.name} className="habitat-detail-img" />
+          <div className="habitat-detail-info">
+            <span className="habitat-detail-num">No.{habitat.number}</span>
+            <h2 className="habitat-detail-name">{habitat.name}</h2>
+            <span className="habitat-area-tag" style={{ backgroundColor: area.color }}>
+              {area.icon} {area.name}
+            </span>
+          </div>
+        </div>
+        <div className="habitat-detail-body">
+          <div className="habitat-detail-items-section">
+            <h3>必要アイテム</h3>
+            <div className="habitat-detail-items">
+              {habitat.items.map((item, i) => <ItemTag key={i} item={item} />)}
+            </div>
+          </div>
+          <div className="habitat-detail-pokemon-section">
+            <h3>出現ポケモン ({habitat.pokemon.length})</h3>
+            <div className="habitat-pokemon-grid">
+              {habitat.pokemon.map((p, i) => (
+                <PokemonCard key={i} pokemon={p} onClick={onPokemonClick} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getAllItems() {
+  const map = new Map();
+  habitats.forEach(h => {
+    h.items.forEach(itemStr => {
+      const baseName = itemStr.replace(/[x×]\d+$/, '').trim();
+      if (!map.has(baseName)) {
+        map.set(baseName, { name: baseName, icon: getItemIcon(itemStr), habitats: [] });
+      }
+      const entry = map.get(baseName);
+      if (!entry.habitats.find(eh => eh.id === h.id)) {
+        entry.habitats.push({ id: h.id, name: h.name, number: h.number, area: h.area, itemFull: itemStr });
+      }
+    });
+  });
+  return Array.from(map.values()).sort((a, b) => b.habitats.length - a.habitats.length);
+}
+
+function ItemListView({ searchQuery, onHabitatClick }) {
+  const allItems = useMemo(() => getAllItems(), []);
+
+  const filtered = useMemo(() => {
+    if (!searchQuery) return allItems;
+    const q = searchQuery.toLowerCase();
+    return allItems.filter(item => item.name.toLowerCase().includes(q));
+  }, [allItems, searchQuery]);
+
+  return (
+    <div className="item-list-view">
+      <div className="item-list-count">{filtered.length}種のアイテム</div>
+      <div className="item-list">
+        {filtered.map((item) => (
+          <div key={item.name} className="item-list-card">
+            <div className="item-list-header">
+              <span className="item-list-icon">{item.icon}</span>
+              <span className="item-list-name">{item.name}</span>
+              <span className="item-list-badge">{item.habitats.length}件</span>
+            </div>
+            <div className="item-list-habitats">
+              {item.habitats.map((h, i) => {
+                const area = AREAS.find(a => a.id === h.area);
+                return (
+                  <div key={i} className="item-habitat-row clickable"
+                    onClick={() => onHabitatClick(h.id)}>
+                    <img src={getHabitatImageUrl(h.number)} alt="" className="item-habitat-thumb" loading="lazy" />
+                    <div className="item-habitat-text">
+                      <span className="item-habitat-num">No.{h.number}</span>
+                      <span className="item-habitat-name">{h.name}</span>
+                    </div>
+                    <span className="item-habitat-area" style={{ backgroundColor: area?.color }}>
+                      {area?.icon}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="no-results">
+            <div className="no-results-icon">🔍</div>
+            <p>アイテムが見つかりません</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ScrollToTop() {
   const [visible, setVisible] = useState(false);
 
@@ -338,6 +458,7 @@ function App() {
   });
   const [viewMode, setViewMode] = useState('habitat');
   const [modalPokemon, setModalPokemon] = useState(null);
+  const [modalHabitat, setModalHabitat] = useState(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -361,6 +482,11 @@ function App() {
 
   const handlePokemonClick = useCallback((name) => {
     setModalPokemon(name);
+  }, []);
+
+  const handleHabitatClick = useCallback((habitatId) => {
+    setModalPokemon(null);
+    setModalHabitat(habitatId);
   }, []);
 
   return (
@@ -406,6 +532,12 @@ function App() {
           >
             📋 ポケモン
           </button>
+          <button
+            className={`view-tab ${viewMode === 'item' ? 'active' : ''}`}
+            onClick={() => setViewMode('item')}
+          >
+            🎒 アイテム
+          </button>
         </div>
 
         <div className="controls">
@@ -413,7 +545,7 @@ function App() {
             <span className="search-icon">🔍</span>
             <input
               type="text"
-              placeholder={viewMode === 'habitat' ? 'ポケモン・生息地・アイテムで検索...' : 'ポケモン名で検索...'}
+              placeholder={viewMode === 'habitat' ? 'ポケモン・生息地・アイテムで検索...' : viewMode === 'pokemon' ? 'ポケモン名で検索...' : 'アイテム名で検索...'}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -493,8 +625,10 @@ function App() {
               })
             )}
           </div>
-        ) : (
+        ) : viewMode === 'pokemon' ? (
           <PokemonListView searchQuery={searchQuery} onPokemonClick={handlePokemonClick} />
+        ) : (
+          <ItemListView searchQuery={searchQuery} onHabitatClick={handleHabitatClick} />
         )}
       </main>
 
@@ -508,7 +642,10 @@ function App() {
       <ScrollToTop />
 
       {modalPokemon && (
-        <PokemonModal name={modalPokemon} onClose={() => setModalPokemon(null)} />
+        <PokemonModal name={modalPokemon} onClose={() => setModalPokemon(null)} onHabitatClick={handleHabitatClick} />
+      )}
+      {modalHabitat && (
+        <HabitatDetailModal habitatId={modalHabitat} onClose={() => setModalHabitat(null)} onPokemonClick={(name) => { setModalHabitat(null); setModalPokemon(name); }} />
       )}
     </div>
   );
