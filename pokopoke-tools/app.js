@@ -708,7 +708,7 @@
     count.textContent = results.length + " 件表示中（全" + HABITATS_DATA.length + " 件）";
 
     if (!results.length) {
-      grid.innerHTML = "<div class="empty-state"><div class="empty-icon">🔍</div><p>見つかりませんでした</p></div>";
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>見つかりませんでした</p></div>';
       return;
     }
 
@@ -716,20 +716,20 @@
       const area = AREA_STYLES[h.area] || { bg:"#EEE", color:"#333", icon:"📍", short:h.area };
       const chips = h.pokemon.map(p => {
         const url = getSpriteUrl(p.name);
-        const img = url ? "<img src="" + escAttr(url) + "" alt="" loading="lazy">" : "";
-        const condIcon = p.cond ? ("<span class="cond-badge">" + escHtml(COND_ICON[p.cond] || p.cond) + "</span>") : "";
-        const rare = "<span class="rarity-dot" style="color:" + (RARITY_COLOR[p.rarity] || "#aaa") + "">" + escHtml(p.rarity) + "</span>";
-        return "<span class="pokemon-chip">" + img + escHtml(p.name) + rare + condIcon + "</span>";
+        const img = url ? `<img src="${escAttr(url)}" alt="" loading="lazy">` : "";
+        const condIcon = p.cond ? `<span class="cond-badge">${escHtml(COND_ICON[p.cond] || p.cond)}</span>` : "";
+        const rare = `<span class="rarity-dot" style="color:${RARITY_COLOR[p.rarity] || "#aaa"}">${escHtml(p.rarity)}</span>`;
+        return `<span class="pokemon-chip">${img}${escHtml(p.name)}${rare}${condIcon}</span>`;
       }).join("");
-      return "<div class="hab-card hab-recipe-card">" +
-        "<div class="hab-recipe-header">" +
-          "<span class="hab-no">No." + escHtml(h.no) + "</span>" +
-          "<span class="hab-name-title">" + escHtml(h.name) + "</span>" +
-          "<span class="hab-area-chip" style="background:" + area.bg + ";color:" + area.color + "">"+area.icon+" "+escHtml(area.short)+"</span>" +
-        "</div>" +
-        "<div class="hab-recipe-materials">📦 " + escHtml(h.materials) + "</div>" +
-        "<div class="pokemon-list">" + chips + "</div>" +
-      "</div>";
+      return `<div class="hab-card hab-recipe-card">` +
+        `<div class="hab-recipe-header">` +
+          `<span class="hab-no">No.${escHtml(h.no)}</span>` +
+          `<span class="hab-name-title">${escHtml(h.name)}</span>` +
+          `<span class="hab-area-chip" style="background:${area.bg};color:${area.color}">${area.icon} ${escHtml(area.short)}</span>` +
+        `</div>` +
+        `<div class="hab-recipe-materials">📦 ${escHtml(h.materials)}</div>` +
+        `<div class="pokemon-list">${chips}</div>` +
+      `</div>`;
     }).join("");
   }
 
