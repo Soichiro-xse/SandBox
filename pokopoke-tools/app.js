@@ -673,4 +673,110 @@
     return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
   }
 
+  // ============================
+  // 8. せいそくち図鑑
+  // ============================
+  const AREA_COLORS = {
+    "パサパサこうやの街":   { bg: "#FFF3E0", border: "#FF9800", text: "#E65100", icon: "🏜️" },
+    "ゴツゴツやまの街":     { bg: "#F3E5F5", border: "#9C27B0", text: "#6A1B9A", icon: "⛰️" },
+    "ドンヨリうみべの街":   { bg: "#E3F2FD", border: "#2196F3", text: "#0D47A1", icon: "🌊" },
+    "キラキラうきしまの街": { bg: "#F9FBE7", border: "#CDDC39", text: "#827717", icon: "✨" },
+    "まっさらな街":         { bg: "#FCE4EC", border: "#E91E63", text: "#880E4F", icon: "🏠" },
+  };
+  const METHOD_COLORS = {
+    "ストーリー":   { bg: "#E8EAF6", color: "#3F51B5", icon: "📖" },
+    "おねがいごと": { bg: "#FFF8E1", color: "#F57F17", icon: "⭐" },
+    "フィールド":   { bg: "#E8F5E9", color: "#2E7D32", icon: "🚶" },
+    "夜のみ":       { bg: "#212121", color: "#90CAF9", icon: "🌙" },
+    "レア/特別":    { bg: "#FCE4EC", color: "#C62828", icon: "👑" },
+  };
+  const RARITY_COLOR = { "★":"#AAB","★★":"#4CAF50","★★★":"#FF9800","★★★★":"#E91E63" };
+
+  let habitatArea   = '';
+  let habitatMethod = '';
+  let habitatQuery  = '';
+
+  function renderHabitats() {
+    const grid  = document.getElementById('habitatGrid');
+    const count = document.getElementById('habitatCount');
+    const q = habitatQuery.toLowerCase();
+
+    const results = HABITATS_DATA.filter(p => {
+      if (habitatArea   && !p.areas.includes(habitatArea))   return false;
+      if (habitatMethod && p.method !== habitatMethod)        return false;
+      if (q             && !p.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    count.textContent = results.length + '匹表示中（全' + HABITATS_DATA.length + '匹）';
+
+    if (results.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>見つかりませんでした</p></div>';
+      return;
+    }
+
+    grid.innerHTML = results.map(p => {
+      const spriteUrl = getSpriteUrl(p.name);
+      const spriteHtml = spriteUrl
+        ? `<img src="${spriteUrl}" alt="${escHtml(p.name)}" loading="lazy" class="hab-sprite">`
+        : `<div class="hab-sprite-placeholder">?</div>`;
+
+      const methodStyle = METHOD_COLORS[p.method] || { bg:'#eee', color:'#333', icon:'•' };
+      const rarityColor = RARITY_COLOR[p.rarity] || '#aab';
+
+      const areaBadges = p.areas.map(a => {
+        const ac = AREA_COLORS[a] || { bg:'#eee', border:'#aaa', text:'#333', icon:'📍' };
+        return `<span class="hab-area-badge" style="background:${ac.bg};border-color:${ac.border};color:${ac.text};">${ac.icon} ${a.replace('の街','')}</span>`;
+      }).join('');
+
+      const itemsHtml = p.items.length
+        ? `<div class="hab-items">🎁 ${p.items.map(i => `<span class="hab-item">${escHtml(i)}</span>`).join('')}</div>`
+        : '';
+
+      return `
+        <div class="hab-card" data-method="${escAttr(p.method)}">
+          <div class="hab-sprite-wrap">${spriteHtml}</div>
+          <div class="hab-info">
+            <div class="hab-name">${escHtml(p.name)}
+              <span class="hab-rarity" style="color:${rarityColor};">${p.rarity}</span>
+            </div>
+            <div class="hab-method-badge" style="background:${methodStyle.bg};color:${methodStyle.color};">
+              ${methodStyle.icon} ${escHtml(p.method)}
+            </div>
+            <div class="hab-areas">${areaBadges}</div>
+            <div class="hab-detail">${escHtml(p.detail)}</div>
+            ${itemsHtml}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // エリアフィルター
+  document.getElementById('habitatAreaTabs').addEventListener('click', e => {
+    const btn = e.target.closest('.hab-area-btn');
+    if (!btn) return;
+    document.querySelectorAll('.hab-area-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    habitatArea = btn.dataset.area;
+    renderHabitats();
+  });
+
+  // 出会い方フィルター
+  document.getElementById('habitatMethodTabs').addEventListener('click', e => {
+    const btn = e.target.closest('.hab-method-btn');
+    if (!btn) return;
+    document.querySelectorAll('.hab-method-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    habitatMethod = btn.dataset.method;
+    renderHabitats();
+  });
+
+  // 検索
+  document.getElementById('habitatSearchInput').addEventListener('input', e => {
+    habitatQuery = e.target.value;
+    renderHabitats();
+  });
+
+  renderHabitats();
+
 })();

@@ -47,6 +47,7 @@
     <button class="tab-btn" data-tab="quests"><span class="tab-icon">&#x2705;</span>おねがいごと</button>
     <button class="tab-btn" data-tab="challenge"><span class="tab-icon">&#x1F3C5;</span>入団チャレンジ</button>
     <button class="tab-btn" data-tab="time-calc"><span class="tab-icon">&#x1F552;</span>時間計算機</button>
+    <button class="tab-btn" data-tab="habitats"><span class="tab-icon">&#x1F30F;</span>せいそくち</button>
   </nav>
 
   <!-- メインコンテンツ -->
@@ -234,6 +235,47 @@
         </div>
       </div>
     </section>
+    <!-- 8. せいそくち -->
+    <section class="tab-content" id="tab-habitats">
+      <div class="card">
+        <h2>ポケモン せいそくち図鑑</h2>
+        <p style="color:var(--text-sub);font-size:0.82rem;margin-bottom:14px;">
+          どのエリアでどうやって出会えるかを画像つきでまとめました。
+        </p>
+
+        <!-- エリアフィルター -->
+        <div class="habitat-area-tabs" id="habitatAreaTabs">
+          <button class="hab-area-btn active" data-area="">🗺️ すべて</button>
+          <button class="hab-area-btn" data-area="パサパサこうやの街">🏜️ こうや</button>
+          <button class="hab-area-btn" data-area="ゴツゴツやまの街">⛰️ やま</button>
+          <button class="hab-area-btn" data-area="ドンヨリうみべの街">🌊 うみべ</button>
+          <button class="hab-area-btn" data-area="キラキラうきしまの街">✨ うきしま</button>
+          <button class="hab-area-btn" data-area="まっさらな街">🏠 まっさら</button>
+        </div>
+
+        <!-- 出会い方フィルター -->
+        <div class="habitat-method-tabs" id="habitatMethodTabs">
+          <button class="hab-method-btn active" data-method="">すべて</button>
+          <button class="hab-method-btn" data-method="ストーリー">📖 ストーリー</button>
+          <button class="hab-method-btn" data-method="おねがいごと">⭐ おねがいごと</button>
+          <button class="hab-method-btn" data-method="フィールド">🚶 フィールド</button>
+          <button class="hab-method-btn" data-method="夜のみ">🌙 夜のみ</button>
+          <button class="hab-method-btn" data-method="レア/特別">👑 レア</button>
+        </div>
+
+        <!-- 検索 -->
+        <div class="search-box" style="margin-bottom:12px;">
+          <input type="text" id="habitatSearchInput" placeholder="ポケモン名で検索...">
+        </div>
+
+        <!-- 件数表示 -->
+        <p class="habitat-count" id="habitatCount"></p>
+      </div>
+
+      <!-- ポケモンカード一覧 -->
+      <div class="habitat-grid" id="habitatGrid"></div>
+    </section>
+
   </main>
 
   <!-- フッター -->
