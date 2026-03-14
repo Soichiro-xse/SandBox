@@ -376,53 +376,207 @@ function getAllItems() {
   return Array.from(map.values()).sort((a, b) => b.habitats.length - a.habitats.length);
 }
 
+const ITEM_CATEGORIES = [
+  { id: 'plant', name: '草・花', icon: '🌿', keywords: ['くさ', 'はな', 'コケ', 'いけがき', '野菜畑', 'うきくさ', 'うきしま'] },
+  { id: 'tree', name: '木・自然', icon: '🌳', keywords: ['木', 'きりかぶ', 'きのみの木', 'ヤシ'] },
+  { id: 'furniture', name: '家具', icon: '🪑', keywords: ['イス', 'テーブル', 'つくえ', 'デスク', 'ベッド', 'ソファ', 'クッション', 'たな', 'ドレッサー', 'クローゼット', 'ロッカー', 'チェスト', 'チェア', 'ハンモック', 'こしかけ', 'だい('] },
+  { id: 'lighting', name: '照明', icon: '💡', keywords: ['ライト', 'ランプ', 'ランタン', 'でんちゅう', 'キャンドル', 'スポットライト', 'がいとう', '明かり'] },
+  { id: 'water', name: '水・温泉', icon: '💧', keywords: ['みず', 'うみのみず', 'おんせん', 'たき', 'ゆぐち', 'どろみず', 'シャワー', 'バスタブ', 'せんめんだい', 'シンク', 'みずおけ'] },
+  { id: 'rock', name: '岩・石', icon: '🪨', keywords: ['いわ', 'いし', 'ふみいし', 'どのう', 'マグマ'] },
+  { id: 'fire', name: '火・熱', icon: '🔥', keywords: ['たきび', 'かがりび', 'たいまつ', 'だんろ', 'ようこうろ', 'キャンプファイヤー', '火力はつでん'] },
+  { id: 'food', name: '食べ物・飲み物', icon: '🍽️', keywords: ['皿にのせた', 'ピザ', 'サンドイッチ', 'おべんとう', 'クッキー', 'ケーキ', 'かきごおり', 'フライドポテト', 'クリームソーダ', 'パーティーカップ', 'パーティープレート', 'マグカップ', 'きのみいり', 'しょっき', 'フードカウンター', 'キッチン', 'コンロ', 'フライパン', 'まないた', 'なべ', 'でんしレンジ', 'パンがま', 'レジ'] },
+  { id: 'music', name: '音楽・ステージ', icon: '🎵', keywords: ['スピーカー', 'マイク', 'ギター', 'ベース', 'おおだいこ', 'CDプレーヤー', 'CDラック', 'おんぷ', 'ステージ'] },
+  { id: 'gaming', name: 'ゲーム・おもちゃ', icon: '🎮', keywords: ['ゲーミング', 'アーケード', 'にんぎょう', 'おもちゃ', 'びっくりばこ', 'すべりだい'] },
+  { id: 'fossil', name: 'カセキ', icon: '🦴', keywords: ['カセキ'] },
+  { id: 'tool', name: '道具・設備', icon: '🔧', keywords: ['はつでんマシン', 'そうさばん', 'じっけん', 'けんびきょう', 'ろんぶん', 'やまほり', 'つりざお', 'きゅうきゅう', 'おそうじ', 'あみもの', 'コンピューター', 'ノートパソコン', 'タブレット', 'テレビ', 'じてんしゃ', 'かしつき'] },
+  { id: 'outdoor', name: '屋外・乗り物', icon: '🏖️', keywords: ['ビーチ', 'パラソル', 'カヌー', 'ビニールボート', 'さんばし', 'せんろ', 'しゃだんき', 'マンホール', 'どかん', 'てつのあしば', 'タイヤ', 'ておしぐるま', 'にぐるま', 'ワゴン', 'じどうはんばいき'] },
+  { id: 'decor', name: '装飾・小物', icon: '🖼️', keywords: ['かけじく', 'かおだし', 'ロケットだん', 'キャンバス', 'いちりんざし', 'ツボ', 'すいしょう', 'かんばん', 'ホワイトボード', 'メニューボード', 'ライチュウかんばん', 'やじるし', 'はかいし', 'ダンスぞう', 'ヨロイ', 'だいざ', 'おそなえ', 'うちあげ', 'ふうせん'] },
+];
+
+function categorizeItem(itemName) {
+  for (const cat of ITEM_CATEGORIES) {
+    if (cat.keywords.some(kw => itemName.includes(kw))) {
+      return cat.id;
+    }
+  }
+  return 'other';
+}
+
+function getCategorizedItems(allItems) {
+  const catMap = new Map();
+  ITEM_CATEGORIES.forEach(c => catMap.set(c.id, []));
+  catMap.set('other', []);
+
+  allItems.forEach(item => {
+    const catId = categorizeItem(item.name);
+    catMap.get(catId).push(item);
+  });
+
+  const result = ITEM_CATEGORIES
+    .map(c => ({ ...c, items: catMap.get(c.id) }))
+    .filter(c => c.items.length > 0);
+
+  const others = catMap.get('other');
+  if (others.length > 0) {
+    result.push({ id: 'other', name: 'その他', icon: '📦', items: others });
+  }
+  return result;
+}
+
 function ItemListView({ searchQuery, onHabitatClick }) {
   const allItems = useMemo(() => getAllItems(), []);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
 
-  const filtered = useMemo(() => {
-    if (!searchQuery) return allItems;
+  const categories = useMemo(() => getCategorizedItems(allItems), [allItems]);
+
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery) return categories;
     const q = searchQuery.toLowerCase();
-    return allItems.filter(item => item.name.toLowerCase().includes(q));
-  }, [allItems, searchQuery]);
+    return categories
+      .map(cat => ({
+        ...cat,
+        items: cat.items.filter(item => item.name.toLowerCase().includes(q)),
+      }))
+      .filter(cat => cat.items.length > 0);
+  }, [categories, searchQuery]);
 
-  return (
-    <div className="item-list-view">
-      <div className="item-list-count">{filtered.length}種のアイテム</div>
-      <div className="item-list">
-        {filtered.map((item) => (
-          <div key={item.name} className="item-list-card">
-            <div className="item-list-header">
-              <span className="item-list-icon">{item.icon}</span>
-              <span className="item-list-name">{item.name}</span>
-              <span className="item-list-badge">{item.habitats.length}件</span>
+  // 検索中はジャンル選択をリセット
+  useEffect(() => {
+    if (searchQuery) {
+      setSelectedCategory(null);
+      setSelectedItem(null);
+    }
+  }, [searchQuery]);
+
+  // ジャンル一覧（トップレベル）
+  if (!selectedCategory && !searchQuery) {
+    return (
+      <div className="item-list-view">
+        <div className="item-list-count">{allItems.length}種のアイテム</div>
+        <div className="item-category-grid">
+          {categories.map(cat => (
+            <div
+              key={cat.id}
+              className="item-category-card"
+              onClick={() => setSelectedCategory(cat.id)}
+            >
+              <span className="item-category-icon">{cat.icon}</span>
+              <span className="item-category-name">{cat.name}</span>
+              <span className="item-category-count">{cat.items.length}種</span>
             </div>
-            <div className="item-list-habitats">
-              {item.habitats.map((h, i) => {
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 検索結果: フラットにアイテム一覧表示
+  if (searchQuery) {
+    const flatItems = filteredCategories.flatMap(c => c.items);
+    return (
+      <div className="item-list-view">
+        <div className="item-list-count">検索結果: {flatItems.length}種</div>
+        {selectedItem ? (
+          <div className="item-detail-view">
+            <button className="item-back-btn" onClick={() => setSelectedItem(null)}>← 検索結果に戻る</button>
+            <div className="item-detail-header">
+              <span className="item-detail-icon">{selectedItem.icon}</span>
+              <span className="item-detail-name">{selectedItem.name}</span>
+              <span className="item-list-badge">{selectedItem.habitats.length}件</span>
+            </div>
+            <div className="item-detail-habitats">
+              <h4>この素材でつくれる生息地</h4>
+              {selectedItem.habitats.map((h, i) => {
                 const area = AREAS.find(a => a.id === h.area);
                 return (
-                  <div key={i} className="item-habitat-row clickable"
-                    onClick={() => onHabitatClick(h.id)}>
+                  <div key={i} className="item-habitat-row clickable" onClick={() => onHabitatClick(h.id)}>
                     <img src={getHabitatImageUrl(h.number)} alt="" className="item-habitat-thumb" loading="lazy" />
                     <div className="item-habitat-text">
                       <span className="item-habitat-num">No.{h.number}</span>
                       <span className="item-habitat-name">{h.name}</span>
                     </div>
-                    <span className="item-habitat-area" style={{ backgroundColor: area?.color }}>
-                      {area?.icon}
-                    </span>
+                    <span className="item-habitat-area" style={{ backgroundColor: area?.color }}>{area?.icon}</span>
                   </div>
                 );
               })}
             </div>
           </div>
-        ))}
-        {filtered.length === 0 && (
-          <div className="no-results">
-            <div className="no-results-icon">🔍</div>
-            <p>アイテムが見つかりません</p>
+        ) : (
+          <div className="item-list">
+            {flatItems.map(item => (
+              <div key={item.name} className="item-row-card" onClick={() => setSelectedItem(item)}>
+                <span className="item-row-icon">{item.icon}</span>
+                <span className="item-row-name">{item.name}</span>
+                <span className="item-list-badge">{item.habitats.length}件</span>
+                <span className="item-row-arrow">›</span>
+              </div>
+            ))}
+            {flatItems.length === 0 && (
+              <div className="no-results">
+                <div className="no-results-icon">🔍</div>
+                <p>アイテムが見つかりません</p>
+              </div>
+            )}
           </div>
         )}
       </div>
+    );
+  }
+
+  // ジャンル選択済み → アイテム一覧 or アイテム詳細
+  const currentCat = categories.find(c => c.id === selectedCategory);
+  if (!currentCat) { setSelectedCategory(null); return null; }
+
+  return (
+    <div className="item-list-view">
+      {selectedItem ? (
+        // アイテム詳細: 生息地一覧
+        <div className="item-detail-view">
+          <button className="item-back-btn" onClick={() => setSelectedItem(null)}>← {currentCat.icon} {currentCat.name}に戻る</button>
+          <div className="item-detail-header">
+            <span className="item-detail-icon">{selectedItem.icon}</span>
+            <span className="item-detail-name">{selectedItem.name}</span>
+            <span className="item-list-badge">{selectedItem.habitats.length}件</span>
+          </div>
+          <div className="item-detail-habitats">
+            <h4>この素材でつくれる生息地</h4>
+            {selectedItem.habitats.map((h, i) => {
+              const area = AREAS.find(a => a.id === h.area);
+              return (
+                <div key={i} className="item-habitat-row clickable" onClick={() => onHabitatClick(h.id)}>
+                  <img src={getHabitatImageUrl(h.number)} alt="" className="item-habitat-thumb" loading="lazy" />
+                  <div className="item-habitat-text">
+                    <span className="item-habitat-num">No.{h.number}</span>
+                    <span className="item-habitat-name">{h.name}</span>
+                  </div>
+                  <span className="item-habitat-area" style={{ backgroundColor: area?.color }}>{area?.icon}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        // アイテム一覧
+        <>
+          <button className="item-back-btn" onClick={() => setSelectedCategory(null)}>← ジャンル一覧に戻る</button>
+          <div className="item-cat-header">
+            <span className="item-cat-header-icon">{currentCat.icon}</span>
+            <span className="item-cat-header-name">{currentCat.name}</span>
+            <span className="item-cat-header-count">{currentCat.items.length}種</span>
+          </div>
+          <div className="item-list">
+            {currentCat.items.map(item => (
+              <div key={item.name} className="item-row-card" onClick={() => setSelectedItem(item)}>
+                <span className="item-row-icon">{item.icon}</span>
+                <span className="item-row-name">{item.name}</span>
+                <span className="item-list-badge">{item.habitats.length}件</span>
+                <span className="item-row-arrow">›</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
